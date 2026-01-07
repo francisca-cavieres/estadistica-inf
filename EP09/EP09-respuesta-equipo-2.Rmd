@@ -1,0 +1,57 @@
+---
+title: "EP09-respuesta-equipo-2"
+output: html_document
+date: "2026-01-07"
+---
+
+## Enunciado
+Un estudio recolectó medidas anatómicas de 247 hombres y 260 mujeres (Heinz et al., 2003). El estudio incluyó nueve mediciones del esqueleto (ocho diámetros y una profundidad de hueso a hueso) y doce mediciones de grosor (circunferencias) que incluyen el tejido. La siguiente tabla detalla las variables registradas en este estudio:
+
+## Pregunta 1
+Definir la semilla a utilizar, que corresponde a los últimos cuatro dígitos del RUN (sin considerar el dígito verificador) del integrante de menor edad del equipo.
+```{r}
+library(dplyr)
+library(rsample)
+datos <- read.csv2("EP09 Datos.csv")
+# 21823234-5
+set.seed(3234)
+
+mujeres <- datos |> 
+  filter(datos$Gender == 0)
+
+
+```
+## Pregunta 2
+Seleccionar una muestra aleatoria de 100 mujeres (si la semilla es un número par) o 100 hombres (si la semilla es impar), y separar 70 casos para trabajar en la construcción de modelos y 30 para su evaluación en datos no vistos.
+```{r}
+# Como la semilla es un número par
+
+mujeres_random <- mujeres |> 
+  sample_n(100)
+mujeres_filtrado <- mujeres_random |>
+  select(-Height,-Weight,-Gender)
+```
+## Pregunta 3
+Seleccionar de forma aleatoria ocho posibles variables predictoras.
+```{r}
+columnas_raw <- names(mujeres_filtrado)
+columnas <- data.frame(columnas_raw)
+variables_aleatorias <- columnas |>
+  sample_n(8)
+names_raw <- variables_aleatorias$columnas_raw
+```
+## Pregunta 4
+```{r}
+mujeres_filtrado2 <- mujeres_filtrado |>
+  select(all_of(names_raw))
+
+mujeres_seleccion <- mujeres_filtrado |>
+  select(-all_of(names_raw))
+
+# Generamos un modelo nulo del peso para poder agregar variables
+peso_nulo <- lm(Weight ~ 1, mujeres_random)
+summary(peso_nulo)
+
+```
+
+
