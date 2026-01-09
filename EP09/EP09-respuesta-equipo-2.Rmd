@@ -44,14 +44,37 @@ names_raw <- variables_aleatorias$columnas_raw
 ```{r}
 mujeres_filtrado2 <- mujeres_filtrado |>
   select(all_of(names_raw))
-
-mujeres_seleccion <- mujeres_filtrado |>
+mujeres_filtrado_con_peso <- mujeres_random |>
+  select(-Height,-Gender)
+mujeres_seleccion <- mujeres_filtrado_con_peso |>
   select(-all_of(names_raw))
 
 # Generamos un modelo nulo del peso para poder agregar variables
-peso_nulo <- lm(Weight ~ 1, mujeres_random)
+peso_nulo <- lm(Weight ~ 1, mujeres_seleccion)
+completo <- lm(Weight ~ ., mujeres_seleccion)
 summary(peso_nulo)
 
 ```
+
+## Elección del predictor
+
+```{r}
+paso <- add1(peso_nulo, scope = completo, test = "F") |> tidy() |> mutate(p.value = format(pvalue(p.value), justify = "right")) |> arrange(AIC)
+cat("", paste("Modelo:", format(formula(nulo))), format(paso, sep = "\n"))
+
+```
+
+Se observa que la variable que disminuye en mayor medida el estadístico AIC es el grueso de la cintura. Por lo anterior, la variable elgida es esta. 
+
+```{r}
+modelo <- update(peso_nulo, . ~ . + Hip.Girth)
+summary(modelo)
+```
+```{r}
+paso <- add1(modelo, scope = completo, test = "F") |> tidy() |> mutate(p.value = format(pvalue(p.value), justify = "right")) |> arrange(AIC)
+cat("", paste("Modelo:", format(formula(modelo))), format(paso), sep = "\n")
+```
+
+Ahora, buscaremos variables entre las generadas aleatoriamente anteriormente. 
 
 
