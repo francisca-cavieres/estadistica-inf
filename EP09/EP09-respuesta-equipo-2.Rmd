@@ -51,7 +51,25 @@ variables_aleatorias <- columnas |>
 
 #Nombre variables predictoras
 names_raw <- variables_aleatorias$columnas_raw
+print(names_raw)
 ```
+
+Las variables aleatorias escogidas son: 
+```{r}
+library("DT")
+Descripcion  = c("Grosor del pecho, sobre tejido mamario en mujeres y a la altura de los pezones en varones","Grosor promedio de la parte más delgada de ambos tobillos", "Grosor promedio de la parte más delgada de ambas muñecas", "Edad", "Grosor de los hombros sobre los músculos deltoides", "Grosor promedio de ambos muslos bajo el pliegue del glúteo", "Grosor promedio de la parte más ancha de ambas pantorrillas", "Grosor a la altura de la cintura") #Descripción de cada componente  
+
+Unidad = c("cm", "cm", "cm", "Años", "cm", "cm", "cm", "cm")
+
+#Tipos de variables correspondientes a los componentes
+#Tabla recopilando los datos anteriores
+Tabla_variables = data.frame(names_raw,Descripcion,Unidad)
+datatable(Tabla_variables, 
+          options = list(pageLength = 14),
+          caption = "Tabla de descripción de variables aleatorias")
+```
+
+
 ## Pregunta 4
 ```{r}
 #Dataframe sin las variables de altura ni genero
@@ -115,17 +133,28 @@ g1
 ```
 Según el modelo de Regresión Lineal Simple construido, se rechaza la hipótesis nula $H_{0}: \beta_{1} = 0$, esto significa que la variable predictora escogida sobre el grosor a la altura de la cadera (Hip.Girth) tiene relación con la variable de salida Peso Corporal (Weight) como se ve en el gráfico anterior.
 
+Con ello el modelo obtenido entonces es
+```{r}
+cat("\nModelo obtenido:\n")
+print(modelo_HG[["coefficients"]])
+```
+
+
 ## Pregunta 6
 
+Para seleccionar entre las variables aleatorias para predictoras se realizará una selección paso a paso:
+
 ```{r}
+#Dataframe con variables aleatorias, peso, y variabble predictora elegida anteriormente
 mujeres_filtrado2 <- mujeres_filtrado_con_peso |>
   select(all_of(names_raw),Weight,Hip.Girth)
 
-
+#Se contruye el modelo con Peso y Hip.Girth
 modelo <- lm(Weight ~ Hip.Girth, mujeres_filtrado2)
 summary(modelo)
 ```
 ```{r}
+#Modelo completo
 completo_variables_aleatorias <- lm(Weight ~ Hip.Girth + ., mujeres_filtrado2)
 summary(completo_variables_aleatorias)
 ```
@@ -135,31 +164,76 @@ Ahora, buscaremos variables entre las generadas aleatoriamente anteriormente.
 
 ```{r}
 paso <- add1(
-  modelo,
-  scope = completo_variables_aleatorias,
-  test = "F"
-) |>
-  as.data.frame() |>
-  tibble::rownames_to_column("variable") |>
-  arrange(AIC)
+  modelo, 
+  scope = completo_variables_aleatorias, 
+  test = "F",
+  direction = "forward"
+)
 
-paso
+paso <- paso[order(paso$AIC), ]
+print(paso)
 ```
 
-Observamos que la variable que más reduce el valor AIC es Knee.Girth, o grosor de la rodilla. Es por esto que es la variable que decidimos agregar primero.
+Observamos que la variable que más reduce el valor AIC es Shoulder.Girth, o grosor de los hombros. Es por esto que es la variable que decidimos agregar primero.
 
 ```{r}
-modelo <- update(modelo, . ~ . + Hip.Girth + Knee.Girth)
-completo_variables_aleatorias <- lm(Weight ~ Hip.Girth + Knee.Girth + ., mujeres_filtrado2)
+#Se agrega al modelo la variable Shoulder.Girth como predictora
+modelo_a <- update(modelo, . ~ . + Shoulder.Girth)
 paso <- add1(
-  modelo,
-  scope = completo_variables_aleatorias,
-  test = "F"
-) |>
-  as.data.frame() |>
-  tibble::rownames_to_column("variable") |>
-  arrange(AIC)
+  modelo_a, 
+  scope = completo_variables_aleatorias, 
+  test = "F",
+  direction = "forward"
+)
 
-paso
+paso <- paso[order(paso$AIC), ]
+print(paso)
 ```
+La variable que más reduce el AIC en este caso es Calf.Maximum.Girth que es el grosor promedio de la parte más ancha de ambas pantorrillas
+```{r}
+#Se agrega al modelo la variable Calf.Maximum.Girth como predictora
+modelo_b <- update(modelo_a, . ~ . + Calf.Maximum.Girth)
+paso <- add1(
+  modelo_b, 
+  scope = completo_variables_aleatorias, 
+  test = "F",
+  direction = "forward"
+)
 
+paso <- paso[order(paso$AIC), ]
+print(paso)
+```
+Una vez agregada la variable Calf.Maximum.Girth como predictora, se identifica la variable que más reduce el AIC como Waist.Girth que es el grosor a la altura de la cintura.
+```{r}
+#Se agrega al modelo la variable Waist.Girth como predictora
+modelo_c <- update(modelo_b, . ~ . + Waist.Girth)
+paso <- add1(
+  modelo_c, 
+  scope = completo_variables_aleatorias, 
+  test = "F",
+  direction = "forward"
+)
+
+paso <- paso[order(paso$AIC), ]
+print(paso)
+```
+Se identifica la variable Wrist.Minimum.Girth (Grosor promedio de la parte más delgada de ambas muñecas) como variable predictora y se agrega al modelo:
+```{r}
+#Se agrega al modelo la variable Wrist.Minimun.Girth como predictora
+modelo_d <- update(modelo_c, . ~ . + Wrist.Minimum.Girth)
+paso <- add1(
+  modelo_d, 
+  scope = completo_variables_aleatorias, 
+  test = "F",
+  direction = "forward"
+)
+
+paso <- paso[order(paso$AIC), ]
+print(paso)
+```
+No quedan más variables predictoras, por lo que nos quedamos con el último modelo obtenido:
+```{r}
+cat("\nModelo obtenido:\n")
+print(modelo_d[["coefficients"]])
+```
+En donde el grosor a la altura de las caderas (Hip.Girth), el grosor de los hombros (Shoulder.Girth), el grosor promedio de la parte más ancha de ambas pantorrillas (Calf.Maximum.Girth), el grosor a la altura de la cintura (Waist.Girth) y grosor promedio de la parte más delgada de ambas muñecas (Wrist.Minimum.Girth) son las variables predictoras del peso corporal (Weight) de las mujeres.
