@@ -42,10 +42,10 @@ names_raw <- variables_aleatorias$columnas_raw
 ```
 ## Pregunta 4
 ```{r}
-mujeres_filtrado2 <- mujeres_filtrado |>
-  select(all_of(names_raw))
 mujeres_filtrado_con_peso <- mujeres_random |>
   select(-Height,-Gender)
+
+
 mujeres_seleccion <- mujeres_filtrado_con_peso |>
   select(-all_of(names_raw))
 
@@ -59,8 +59,17 @@ summary(peso_nulo)
 ## Elección del predictor
 
 ```{r}
-paso <- add1(peso_nulo, scope = completo, test = "F") |> tidy() |> mutate(p.value = format(pvalue(p.value), justify = "right")) |> arrange(AIC)
-cat("", paste("Modelo:", format(formula(nulo))), format(paso, sep = "\n"))
+
+paso <- add1(
+  peso_nulo,
+  scope = completo,
+  test = "F"
+) |>
+  as.data.frame() |>
+  tibble::rownames_to_column("variable") |>
+  arrange(AIC)
+
+paso
 
 ```
 
@@ -71,10 +80,42 @@ modelo <- update(peso_nulo, . ~ . + Hip.Girth)
 summary(modelo)
 ```
 ```{r}
-paso <- add1(modelo, scope = completo, test = "F") |> tidy() |> mutate(p.value = format(pvalue(p.value), justify = "right")) |> arrange(AIC)
-cat("", paste("Modelo:", format(formula(modelo))), format(paso), sep = "\n")
+mujeres_filtrado2 <- mujeres_filtrado_con_peso |>
+  select(all_of(names_raw),Weight,Hip.Girth)
+completo_variables_aleatorias <- lm(Weight ~ Hip.Girth + ., mujeres_filtrado2)
+summary(completo_variables_aleatorias)
 ```
 
 Ahora, buscaremos variables entre las generadas aleatoriamente anteriormente. 
 
+
+```{r}
+paso <- add1(
+  modelo,
+  scope = completo_variables_aleatorias,
+  test = "F"
+) |>
+  as.data.frame() |>
+  tibble::rownames_to_column("variable") |>
+  arrange(AIC)
+
+paso
+```
+
+Observamos que la variable que más reduce el valor AIC es Knee.Girth, o grosor de la rodilla. Es por esto que es la variable que decidimos agregar primero.
+
+```{r}
+modelo <- update(peso_nulo, . ~ . + Hip.Girth + Knee.Girth)
+completo_variables_aleatorias <- lm(Weight ~ Hip.Girth + Knee.Girth + ., mujeres_filtrado2)
+paso <- add1(
+  modelo,
+  scope = completo_variables_aleatorias,
+  test = "F"
+) |>
+  as.data.frame() |>
+  tibble::rownames_to_column("variable") |>
+  arrange(AIC)
+
+paso
+```
 
