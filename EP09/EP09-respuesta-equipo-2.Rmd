@@ -26,26 +26,39 @@ Seleccionar una muestra aleatoria de 100 mujeres (si la semilla es un número pa
 ```{r}
 # Como la semilla es un número par
 
+#Se seleccionan 100 mujeres aleatorias
 mujeres_random <- mujeres |> 
   sample_n(100)
+
+#Se seleccionan 70 casos para la construcción de modelos
+mujeres_random70 <- mujeres_random |>
+  sample_n(70)
+
+#Se saca del dataframe las variables que no seran variables predictoras
 mujeres_filtrado <- mujeres_random |>
   select(-Height,-Weight,-Gender)
 ```
 ## Pregunta 3
 Seleccionar de forma aleatoria ocho posibles variables predictoras.
 ```{r}
+#Nombre de las columnas
 columnas_raw <- names(mujeres_filtrado)
 columnas <- data.frame(columnas_raw)
+
+#Se seleccionan de forma aleatoria 8 variables predictoras
 variables_aleatorias <- columnas |>
   sample_n(8)
+
+#Nombre variables predictoras
 names_raw <- variables_aleatorias$columnas_raw
 ```
 ## Pregunta 4
 ```{r}
-mujeres_filtrado_con_peso <- mujeres_random |>
+#Dataframe sin las variables de altura ni genero
+mujeres_filtrado_con_peso <- mujeres_random70 |>
   select(-Height,-Gender)
 
-
+#Se quitan las 8 variables predictoras seleccionadas anteriormente
 mujeres_seleccion <- mujeres_filtrado_con_peso |>
   select(-all_of(names_raw))
 
@@ -56,7 +69,7 @@ summary(peso_nulo)
 
 ```
 
-## Elección del predictor
+### Elección del predictor
 
 ```{r}
 
@@ -73,15 +86,46 @@ paso
 
 ```
 
-Se observa que la variable que disminuye en mayor medida el estadístico AIC es el grueso de la cintura. Por lo anterior, la variable elgida es esta. 
+Se observa que la variable que disminuye en mayor medida el estadístico AIC es el grueso de la cintura. Por lo anterior, la variable elegida es esta. 
 
+## Pregunta 5
+Usando el entorno R y paquetes estándares, construir un modelo de regresión lineal simple con el predictor seleccionado en el paso anterior.
+
+Recordando que las hipótesis en el modelo de regresión lineal son:
+$$H_{0}: \beta_{1} = 0$$
+$$H_{A}: \beta_{1} \neq 0$$
+Donde $\beta_{1}$ es la pendiente del modelo, $\beta_{0}$ la intersección con el eje $y$ y $x$ la variable predictora (en este caso Hip.Girth).
+$$\hat{y} = \beta_{0} + \beta_{1}x$$
+
+
+El predictor seleccionado fue "Hip.Girth" por lo tanto se construye el modelo agregando esta variable al modelo nulo.
 ```{r}
-modelo <- update(peso_nulo, . ~ . + Hip.Girth)
-summary(modelo)
+modelo_HG <- update(peso_nulo, . ~ . + Hip.Girth)
+summary(modelo_HG)
 ```
+Se arma un gráfico para visualizar el modelo construido.
+```{r}
+library (ggpubr)
+g1 <- ggscatter(mujeres_seleccion , x = "Hip.Girth" , y = "Weight" ,
+                  color = " steelblue " , fill = " steelblue1 " , alpha = 0.5 , size = 3,
+                  ylab = " Peso corporal [Kg] " )
+g1 <- g1 + geom_abline(intercept = coef(modelo_HG)[1] , slope = coef(modelo_HG)[2], color = " steelblue4 " )
+g1 <- g1 + xlab ( bquote( "Grosor a la altura de la cadera [cm]"))
+g1
+```
+Según el modelo de Regresión Lineal Simple construido, se rechaza la hipótesis nula $H_{0}: \beta_{1} = 0$, esto significa que la variable predictora escogida sobre el grosor a la altura de la cadera (Hip.Girth) tiene relación con la variable de salida Peso Corporal (Weight) como se ve en el gráfico anterior.
+
+## Pregunta 6
+
 ```{r}
 mujeres_filtrado2 <- mujeres_filtrado_con_peso |>
   select(all_of(names_raw),Weight,Hip.Girth)
+
+
+modelo <- lm(Weight ~ Hip.Girth, mujeres_filtrado2)
+summary(modelo)
+```
+```{r}
 completo_variables_aleatorias <- lm(Weight ~ Hip.Girth + ., mujeres_filtrado2)
 summary(completo_variables_aleatorias)
 ```
@@ -105,7 +149,7 @@ paso
 Observamos que la variable que más reduce el valor AIC es Knee.Girth, o grosor de la rodilla. Es por esto que es la variable que decidimos agregar primero.
 
 ```{r}
-modelo <- update(peso_nulo, . ~ . + Hip.Girth + Knee.Girth)
+modelo <- update(modelo, . ~ . + Hip.Girth + Knee.Girth)
 completo_variables_aleatorias <- lm(Weight ~ Hip.Girth + Knee.Girth + ., mujeres_filtrado2)
 paso <- add1(
   modelo,
