@@ -10,6 +10,8 @@ Un estudio recolectó medidas anatómicas de 247 hombres y 260 mujeres (Heinz et
 ## Pregunta 1
 Definir la semilla a utilizar, que corresponde a los últimos cuatro dígitos del RUN (sin considerar el dígito verificador) del integrante de menor edad del equipo.
 ```{r}
+library(car)
+library(leaps)
 library(dplyr)
 library(rsample)
 datos <- read.csv2("EP09 Datos.csv")
@@ -33,6 +35,8 @@ mujeres_random <- mujeres |>
 #Se seleccionan 70 casos para la construcción de modelos
 mujeres_random70 <- mujeres_random |>
   sample_n(70)
+mujeres_random_30 <- mujeres_random |>
+  anti_join(mujeres_random70)
 
 #Se saca del dataframe las variables que no seran variables predictoras
 mujeres_filtrado <- mujeres_random |>
@@ -236,4 +240,122 @@ No quedan más variables predictoras, por lo que nos quedamos con el último mod
 cat("\nModelo obtenido:\n")
 print(modelo_d[["coefficients"]])
 ```
+
+```{r}
+summary(modelo_d)
+```
+
 En donde el grosor a la altura de las caderas (Hip.Girth), el grosor de los hombros (Shoulder.Girth), el grosor promedio de la parte más ancha de ambas pantorrillas (Calf.Maximum.Girth), el grosor a la altura de la cintura (Waist.Girth) y grosor promedio de la parte más delgada de ambas muñecas (Wrist.Minimum.Girth) son las variables predictoras del peso corporal (Weight) de las mujeres.
+
+Para evaluar la confiabilidad del modelo obtenido, verificaremos las siguientes condiciones:
+
+1. La variable de respuesta debe ser cuantitativa y continua, sin restricciones para su variabilidad: La variable de repuesta es el Peso, y se observa que es cuantitativa y continua, pues mide una magnitud física. Por lo mismo, no existen restricciones para su variabilidad.
+  
+
+2. Los predictores deben ser cuantitativos o dicotómicos (de ahí la necesidad de variables indicadoras para manejar más de dos niveles): Todos los predictores elegidos corresponden a variables que miden magnitudes física en cm, por lo que corresponden a variables cuantitativas.
+
+3. Los predictores deben tener algún grado de variabilidad (su varianza no debe ser igual a cero). En otras palabras, no pueden ser constantes.
+```{r}
+apply(mujeres_random70[, c("Hip.Girth", "Shoulder.Girth", "Calf.Maximum.Girth" , "Waist.Girth","Wrist.Minimum.Girth")], 2, var)
+```
+
+Se verifica que todos los predictores presentan varianza estrictamente mayor que cero, por lo que ninguno de ellos es constante y se cumple el supuesto de variabilidad de los predictores.
+
+4. Cada predictor debe estar relacionado linealmente con la respuesta.
+
+5. La distribución de los residuos debe ser cercana a la normal centrada en cero.
+
+6. La variabilidad de los residuos debe ser aproximadamente constante (homocedasticidad).
+
+Para los puntos 4, 5 y 6 realizaremos gráficos de influencia y residuos comparados con el predictor.
+```{r}
+residualPlots(modelo_d)
+```
+En los gráficos de residuos se observan leves curvaturas para algunas variables, particularmente Waist.Girth, lo que sugiere una posible desviación leve del supuesto de linealidad. Sin embargo, estas desviaciones no parecen severas. Asimismo, los residuos se encuentran aproximadamente centrados en cero y no presentan desviaciones extremas respecto a la normalidad. La dispersión de los residuos es relativamente constante, por lo que el supuesto de homocedasticidad se considera razonablemente satisfecho.
+
+Se analizó el impacto de observaciones potencialmente influyentes mediante la distancia de Cook. Al excluir dichas observaciones y reajustar el modelo, se observa que los supuestos se mantienen razonablemente y las conclusiones generales no se alteran, por lo que el modelo original se considera adecuado.
+
+```{r}
+influencePlot(modelo_d)
+```
+
+
+```{r}
+outliers <- c("62","40","26")
+
+train <- mujeres_random70[ !rownames(mujeres_random70) %in% outliers, ]
+
+modelo_train <- update(modelo_d, data = train)
+
+residualPlots(modelo_train)
+```
+
+
+```{r}
+influencePlot(modelo_train)
+```
+
+De lo anterior, es posible observar que los gráficos de residuos no muestran patrones sistemáticos, lo que indica que el supuesto de linealidad se cumple razonablemente
+
+Al comparar el modelo ajustado con la muestra completa y el modelo obtenido tras la exclusión temporal de las observaciones identificadas, se observa que:
+
+- los coeficientes mantienen magnitudes y signos coherentes,
+
+- el ajuste global del modelo no se ve sustancialmente alterado, y
+
+- los supuestos del modelo continúan siendo razonablemente satisfechos.
+
+En consecuencia, se concluye que el modelo es robusto frente a la presencia de estas observaciones y se decide mantener el modelo ajustado con la muestra completa, utilizando la exclusión únicamente con fines diagnósticos y no como criterio de selección final.
+
+
+7. Los residuos deben ser independientes entre sí.
+```{r}
+durbinWatsonTest(modelo_d)
+```
+
+Dado que el test de Durbin–Watson no resulta significativo (p > 0.05), no existe evidencia de autocorrelación entre los residuos, por lo que el supuesto de independencia se considera satisfecho.
+
+8. No debe existir multicolinealidad. Esto significa que no deben darse relaciones lineales fuertes (coeficientes de correlación altos) entre dos o más predictores.
+```{r}
+vif(modelo_d)
+```
+
+Se observa que los valores para todas las variables se encuentran entre 2 y 5, por lo que las relaciones lineales entre ellos no son fuertes.
+
+
+9. Las estimaciones de los coeficientes del modelo no debe estar alterados por unos pocas observaciones influyentes.
+```{r}
+plot(modelo_d, which = 4)
+```
+
+El análisis de la distancia de Cook no evidencia observaciones con influencia excesiva, ya que todos los valores se encuentran muy por debajo del umbral crítico. Por ello, el supuesto de ausencia de casos influyentes severos se considera satisfecho.
+
+```{r}
+summary(modelo_d)
+```
+El modelo presenta un alto coeficiente de determinación ajustado ($R_{adj}^2$=0.9137), lo que indica que una proporción considerable de la variabilidad del peso corporal es explicada por los predictores incluidos.
+
+## Generalización
+
+```{r}
+print(summary(modelo_d))
+rmse_modelo_70 <- sqrt(mean(resid(modelo_d)**2))
+cat("RMSE para el conjunto de entrenamiento:",rmse_modelo_70, "\n")
+
+predicciones <- predict(modelo_d, mujeres_random_30)
+
+error <- mujeres_random_30[["Weight"]] - predicciones
+
+rmse_prueba <- sqrt(mean(error **2))
+cat("RMSE para el conjunto de prueba:",rmse_prueba)
+```
+Los valores de RMSE obtenidos para el conjunto de entrenamiento y de prueba son del mismo orden de magnitud, lo que sugiere un desempeño predictivo consistente y ausencia de sobreajuste relevante.
+
+
+## Conclusión
+
+El modelo final presenta un alto coeficiente de determinación ajustado, lo que indica que una proporción considerable de la variabilidad del peso corporal es explicada por las variables incluidas. El análisis de los supuestos del modelo muestra que, en general, se cumplen razonablemente las condiciones de linealidad, normalidad de los residuos, homocedasticidad, independencia y ausencia de multicolinealidad severa. Si bien se identificaron algunas observaciones con mayor influencia relativa, estas no alteran de forma sustantiva el ajuste ni las conclusiones del modelo, por lo que se decidió mantener el modelo ajustado con la muestra completa.
+
+Finalmente, al evaluar el poder predictivo del modelo en datos no utilizados para su construcción, se obtuvieron valores de error de predicción del mismo orden de magnitud que los observados en el conjunto de entrenamiento, lo que sugiere un desempeño predictivo consistente y una adecuada capacidad de generalización dentro del contexto del estudio.
+
+En conjunto, los resultados indican que el modelo obtenido constituye una aproximación adecuada y robusta para describir la relación entre el peso corporal y las medidas antropométricas consideradas en la población analizada, bajo los supuestos del modelo de regresión lineal múltiple.
