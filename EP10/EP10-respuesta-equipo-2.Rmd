@@ -1,0 +1,193 @@
+---
+title: "EP10-respuesta-equipo-2"
+output: html_document
+date: "2026-01-16"
+---
+## Enunciado
+
+Para este ejercicio usaremos los datos de medidas anatómicas recolectados por Heinz et al. (2003) que ya conocimos en el ejercicio práctico anterior (disponibles en el archivo "EP09 Datos.csv"). Como en este case se requiere de una variable dicotómica, vamos a realizar lo siguiente:
+
+1. El equipo crea la variable IMC (índice de masa corporal) como el peso de una persona (en kilogramos) dividida por el cuadrado de su estatura (en metros).
+
+```{r}
+library(car)
+library(caret)
+library(leaps)
+library(dplyr)
+library(ggpubr)
+library(rsample)
+library(pROC)
+# Recopilación de datos
+datos <- read.csv2("EP09 Datos.csv")
+
+calculate_IMC <- function(roww){
+  peso <- roww["Weight"]
+  altura <- roww["Height"]/100
+  IMC <- peso / (altura**2)
+  return(IMC)
+}
+
+imc_array <- apply(datos,1,calculate_IMC)
+new_dataframe <- cbind(datos,imc_array)
+```
+2. Si bien esta variable se usa para clasificar a las personas en varias clases de estado nutricional (bajo peso, normal, sobrepeso, obesidad, obesidad mórbida), para efectos de este ejercicio, usaremos dos clases: sobrepeso (IMC ≥ 23,2) y no sobrepeso (IMC < 23,2).
+```{r}
+umbral <- 23.2
+```
+
+3. El equipo crea la variable dicotómica EN (estado nutricional) de acuerdo al valor de IMC de cada persona.
+
+```{r}
+# 1 ->  tiene sobrepeso, 2 -> no sobrepeso
+estado_nutricional <- function(row){
+  if(row["imc_array"] >= umbral){
+    return(1)
+  }else if(row["imc_array"] < umbral){
+    return(0)
+  }else{
+    return(0)
+  }
+}
+
+EN <- apply(new_dataframe,1,estado_nutricional)
+datos_IMC <- cbind(new_dataframe,EN)
+```
+
+## Paso 1
+
+Asegurando reproducibilidad, seleccionar una muestra de 150 mujeres (si su n° de equipo es un número par) o 150 hombres (si su n° de equipo es impar), asegurando que la mitad tenga estado nutricional “sobrepeso” y la otra mitad “no sobrepeso” en cada caso. Dividir esta muestra en dos conjuntos: los datos de 100 personas (50 con EN “sobrepeso”) para utilizar en la construcción de los modelos y 50 personas (25 con EN “sobrepeso”) para poder evaluarlos.
+
+```{r}
+# Nuestro número de equipo es par, por lo tanto debemos elegir una muestra de 150 mujeres.
+mujeres <- datos_IMC[which(datos_IMC$Gender == 0),]
+cut <- 150/2
+
+mujeres_sobrepeso <- datos_IMC[which(datos_IMC$EN == 1),]
+mujeres_no_sobrepeso <- datos_IMC[which(datos_IMC$EN == 0),]
+mujeres_sobrepeso <- mujeres_sobrepeso |>
+  sample_n(cut)
+mujeres_no_sobrepeso <- mujeres_no_sobrepeso |>
+  sample_n(cut)
+muestra <- bind_rows(mujeres_sobrepeso,mujeres_no_sobrepeso)
+muestra_100 <- bind_rows(muestra[which(muestra$EN == 0),] |> sample_n(50), muestra[which(muestra$EN == 1),] |> sample_n(50))
+muestra_50 <- muestra |>
+  anti_join(muestra_100)
+
+```
+
+## Paso 2
+
+Recordar las ocho posibles variables predictoras seleccionadas de forma aleatoria en el ejercicio anterior.
+
+```{r}
+set.seed(3234)
+# No utilizaremos esta variable, pero necesitamos seguir los mismos pasos para obtener las mismas variables.
+mujeres_random <- mujeres |> 
+  sample_n(100)
+
+mujeres_filtrado <- mujeres_random |>
+  select(-Height,-Weight,-Gender)
+
+columnas_raw <- names(mujeres_filtrado)
+columnas <- data.frame(columnas_raw)
+
+#Se seleccionan de forma aleatoria 8 variables predictoras
+variables_aleatorias <- columnas |>
+  sample_n(8)
+
+#Nombre variables predictoras
+names_raw <- variables_aleatorias$columnas_raw
+print(names_raw)
+```
+
+
+```{r}
+library("DT")
+Descripcion  = c("Grosor del pecho, sobre tejido mamario en mujeres y a la altura de los pezones en varones","Grosor promedio de la parte más delgada de ambos tobillos", "Grosor promedio de la parte más delgada de ambas muñecas", "Edad", "Grosor de los hombros sobre los músculos deltoides", "Grosor promedio de ambos muslos bajo el pliegue del glúteo", "Grosor promedio de la parte más ancha de ambas pantorrillas", "Grosor a la altura de la cintura") #Descripción de cada componente  
+
+Unidad = c("cm", "cm", "cm", "Años", "cm", "cm", "cm", "cm")
+
+#Tipos de variables correspondientes a los componentes
+#Tabla recopilando los datos anteriores
+Tabla_variables = data.frame(names_raw,Descripcion,Unidad)
+datatable(Tabla_variables, 
+          options = list(pageLength = 14),
+          caption = "Tabla de descripción de variables aleatorias")
+```
+## Paso 3
+Seleccionar, de las otras variables, una que el equipo considere que podría ser útil para predecir la clase EN, justificando bien esta selección (idealmente con literatura).
+Fuente: 
+
+Domínguez-Reyes, Teresa, Quiroz-Vargas, Irma, Salgado-Bernabé, Aralia Berenice, Salgado-Goytia, Lorenzo, Muñoz-Valle, José Francisco, & Parra-Rojas, Isela. (2017). Las medidas antropométricas como indicadores predictivos de riesgo metabólico en una población mexicana. Nutrición Hospitalaria, 34(1), 96-101. https://dx.doi.org/10.20960/nh.983
+
+De acuerdo al siguiente paper, es posible decir que una buena candidata para predecir el sobrepeso de una mujer, es la circunferencia de la cintura. Es decir, Waist.Girth. Entonces, la primera variables elegida para predecir el estado nutricional de una mujer es el grosor de la cintura. 
+
+## Paso 4
+Usando el entorno R, construir un modelo de regresión logística con el predictor seleccionado en el paso anterior y utilizando de la muestra obtenida.
+
+```{r}
+nulo <- glm(EN ~ 1, family= binomial(link = "logit"), data = muestra_100)
+completo <- glm(EN ~ ., family = binomial(link = "logit"), data = muestra_100)
+
+modelo <- glm(EN ~ Waist.Girth, family = binomial(link = "logit"), data = muestra_100)
+
+print(summary(modelo), signif.stars = FALSE)
+cat("----\n")
+print(anova(modelo, test = "LRT"), signif.stars = FALSE)
+```
+Observamos que el grosor de la cintura aporta significativamente al modelo, teniendo un valor z de 0.05 y un valor p bastante inferior a 0,05. Además, la desviación para este modelo redujo de 138,629, que corresponde a la desviación del modelo nulo, a 72,514. Más aún, su valor AIC corresponde a 76,514. 
+Ahora, en la segunda parte, observamos que la reducción de desviación conseguida es significativa (p < 0,001), por lo tanto, podemos concluir que el modelo con este predictor presenta un mejor ajuste que con el modelo nulo.
+
+
+## Paso 5
+
+Usando herramientas estándares para la exploración de modelos del entorno R, buscar entre dos y cinco predictores de entre las variables seleccionadas al azar, recordadas en el punto 2, para agregar al modelo obtenido en el paso 4.
+
+```{r, warning=FALSE}
+seleccion_dataframe <- datos_IMC |>
+  select(all_of(names_raw))
+Waist.Girth <- datos_IMC$Waist.Girth
+#imc_array <- datos_IMC$imc_array
+seleccion_dataframe <- cbind(seleccion_dataframe,Waist.Girth)
+modelo <- step(modelo, scope = list(lower=~Waist.Girth,upper = formula(completo)),
+               direction = "both", trace=FALSE)
+cat("Modelo RLog conseguido con regresión escalonada:\n")
+cat("------ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
+print(summary(modelo))
+
+```
+```{r,warning=FALSE}
+modelo <- step(modelo, scope = list(lower=~Waist.Girth,upper = formula(completo)),
+               direction = "forward", trace=FALSE)
+cat("Modelo RLog conseguido con regresión escalonada 2da vez:\n")
+cat("------ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
+print(summary(modelo))
+```
+
+## Paso 6
+
+Evaluar la confiabilidad y generalidad de los modelos (i.e. que tengan un buen nivel de ajuste, que cumplen las condiciones para RLogit y no están dominados por casos sobreinfluyentes) y “arreglarlos” en caso de que tengan algún problema.
+
+Condiciones para Rlogit:
+
+1. Debe existir una relación lineal entre los predictores y la respuesta transformada.
+
+2. Los residuos deben ser independientes entre sí.
+
+Método de optimización no converja:
+
+3. Multicolinealidad entre los predictores, que en este caso se evalúa y aborda del mismo moso que para RLM (por ejemplo, mediante el factor de inflación de la varianza o la tolerancia)..
+
+4. Información incompleta, que se produce cuando no contamos con observaciones suficientes para todas las posibles combinaciones de predictores de predictores, en especial para algún nivel de una variable categórica.
+
+5. Separación perfecta, que ocurre cuando no hay superposición entre las clases (es decir, como vimos, cuando los predivtores separan ambas clases completamente)
+
+Presencia de casos problemáticos
+
+6. Las estimaciones de los cieficientes del modelo no están dominadas por casos influyentes
+
+
+## Paso 7
+
+Usando código estándar, evaluar el poder predictivo de los modelos con los datos de las 50 personas que no se incluyeron en su construcción en términos de sensibilidad y especificidad.
+
