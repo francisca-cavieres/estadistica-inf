@@ -2945,7 +2945,9 @@ y la otra mitad “no sobrepeso” en cada caso. Dividir esta muestra en dos
 conjuntos: los datos de 100 personas (50 con EN “sobrepeso”) para
 utilizar en la construcción de los modelos y 50 personas (25 con EN
 “sobrepeso”) para poder evaluarlos.</p>
-<pre class="r"><code># Nuestro número de equipo es par, por lo tanto debemos elegir una muestra de 150 mujeres.
+<pre class="r"><code>set.seed(3234)
+# Nuestro número de equipo es par, por lo tanto debemos elegir una muestra de 150 mujeres.
+mujeres_inicial &lt;- datos[which(datos$Gender == 0),]
 mujeres &lt;- datos_IMC[which(datos_IMC$Gender == 0),]
 cut &lt;- 150/2
 
@@ -2971,9 +2973,9 @@ muestra_50 &lt;- muestra |&gt;
 <p>Recordar las ocho posibles variables predictoras seleccionadas de
 forma aleatoria en el ejercicio anterior.</p>
 <pre class="r"><code>set.seed(3234)
-# No utilizaremos esta variable, pero necesitamos seguir los mismos pasos para obtener las mismas variables.
-mujeres_random &lt;- mujeres |&gt; 
-  sample_n(100)
+# EXACT SAME RANDOM STEPS
+mujeres_random &lt;- mujeres_inicial |&gt; sample_n(100)
+mujeres_random70 &lt;- mujeres_random |&gt; sample_n(70)
 
 mujeres_filtrado &lt;- mujeres_random |&gt;
   select(-Height,-Weight,-Gender)
@@ -2981,17 +2983,18 @@ mujeres_filtrado &lt;- mujeres_random |&gt;
 columnas_raw &lt;- names(mujeres_filtrado)
 columnas &lt;- data.frame(columnas_raw)
 
-#Se seleccionan de forma aleatoria 8 variables predictoras
-variables_aleatorias &lt;- columnas |&gt;
-  sample_n(8)
-
-#Nombre variables predictoras
+variables_aleatorias &lt;- columnas |&gt; sample_n(8)
 names_raw &lt;- variables_aleatorias$columnas_raw
 print(names_raw)</code></pre>
-<pre><code>## [1] &quot;Shoulder.Girth&quot;      &quot;Chest.diameter&quot;      &quot;Knees.diameter&quot;     
-## [4] &quot;Knee.Girth&quot;          &quot;imc_array&quot;           &quot;Ankle.Minimum.Girth&quot;
-## [7] &quot;Age&quot;                 &quot;Chest.depth&quot;</code></pre>
-<pre class="r"><code>library(&quot;DT&quot;)
+<pre><code>## [1] &quot;Chest.depth&quot;         &quot;Ankle.Minimum.Girth&quot; &quot;Wrist.Minimum.Girth&quot;
+## [4] &quot;Age&quot;                 &quot;Shoulder.Girth&quot;      &quot;Thigh.Girth&quot;        
+## [7] &quot;Calf.Maximum.Girth&quot;  &quot;Waist.Girth&quot;</code></pre>
+<pre class="r"><code>seleccion_dataframe &lt;- muestra_100 |&gt;
+  select(EN, Hip.Girth, all_of(names_raw))
+
+#imc_array &lt;- datos_IMC$imc_array
+#seleccion_dataframe &lt;- cbind(seleccion_dataframe,Hip.Girth,EN)
+library(&quot;DT&quot;)
 Descripcion  = c(&quot;Grosor del pecho, sobre tejido mamario en mujeres y a la altura de los pezones en varones&quot;,&quot;Grosor promedio de la parte más delgada de ambos tobillos&quot;, &quot;Grosor promedio de la parte más delgada de ambas muñecas&quot;, &quot;Edad&quot;, &quot;Grosor de los hombros sobre los músculos deltoides&quot;, &quot;Grosor promedio de ambos muslos bajo el pliegue del glúteo&quot;, &quot;Grosor promedio de la parte más ancha de ambas pantorrillas&quot;, &quot;Grosor a la altura de la cintura&quot;) #Descripción de cada componente  
 
 Unidad = c(&quot;cm&quot;, &quot;cm&quot;, &quot;cm&quot;, &quot;Años&quot;, &quot;cm&quot;, &quot;cm&quot;, &quot;cm&quot;, &quot;cm&quot;)
@@ -3002,52 +3005,48 @@ Tabla_variables = data.frame(names_raw,Descripcion,Unidad)
 datatable(Tabla_variables, 
           options = list(pageLength = 14),
           caption = &quot;Tabla de descripción de variables aleatorias&quot;)</code></pre>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-c571294503768c3b6305" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-c571294503768c3b6305">{"x":{"filter":"none","vertical":false,"caption":"<caption>Tabla de descripción de variables aleatorias<\/caption>","data":[["1","2","3","4","5","6","7","8"],["Shoulder.Girth","Chest.diameter","Knees.diameter","Knee.Girth","imc_array","Ankle.Minimum.Girth","Age","Chest.depth"],["Grosor del pecho, sobre tejido mamario en mujeres y a la altura de los pezones en varones","Grosor promedio de la parte más delgada de ambos tobillos","Grosor promedio de la parte más delgada de ambas muñecas","Edad","Grosor de los hombros sobre los músculos deltoides","Grosor promedio de ambos muslos bajo el pliegue del glúteo","Grosor promedio de la parte más ancha de ambas pantorrillas","Grosor a la altura de la cintura"],["cm","cm","cm","Años","cm","cm","cm","cm"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>names_raw<\/th>\n      <th>Descripcion<\/th>\n      <th>Unidad<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":14,"columnDefs":[{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"names_raw","targets":1},{"name":"Descripcion","targets":2},{"name":"Unidad","targets":3}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[10,14,25,50,100]}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-1d3e06d6ca44c14f6da4" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-1d3e06d6ca44c14f6da4">{"x":{"filter":"none","vertical":false,"caption":"<caption>Tabla de descripción de variables aleatorias<\/caption>","data":[["1","2","3","4","5","6","7","8"],["Chest.depth","Ankle.Minimum.Girth","Wrist.Minimum.Girth","Age","Shoulder.Girth","Thigh.Girth","Calf.Maximum.Girth","Waist.Girth"],["Grosor del pecho, sobre tejido mamario en mujeres y a la altura de los pezones en varones","Grosor promedio de la parte más delgada de ambos tobillos","Grosor promedio de la parte más delgada de ambas muñecas","Edad","Grosor de los hombros sobre los músculos deltoides","Grosor promedio de ambos muslos bajo el pliegue del glúteo","Grosor promedio de la parte más ancha de ambas pantorrillas","Grosor a la altura de la cintura"],["cm","cm","cm","Años","cm","cm","cm","cm"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>names_raw<\/th>\n      <th>Descripcion<\/th>\n      <th>Unidad<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":14,"columnDefs":[{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"names_raw","targets":1},{"name":"Descripcion","targets":2},{"name":"Unidad","targets":3}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[10,14,25,50,100]}},"evals":[],"jsHooks":[]}</script>
 </div>
 <div id="paso-3" class="section level2">
 <h2>Paso 3</h2>
 <p>Seleccionar, de las otras variables, una que el equipo considere que
 podría ser útil para predecir la clase EN, justificando bien esta
 selección (idealmente con literatura). Fuente:</p>
-<p>Domínguez-Reyes, Teresa, Quiroz-Vargas, Irma, Salgado-Bernabé, Aralia
-Berenice, Salgado-Goytia, Lorenzo, Muñoz-Valle, José Francisco, &amp;
-Parra-Rojas, Isela. (2017). Las medidas antropométricas como indicadores
-predictivos de riesgo metabólico en una población mexicana. Nutrición
-Hospitalaria, 34(1), 96-101. <a href="https://dx.doi.org/10.20960/nh.983" class="uri">https://dx.doi.org/10.20960/nh.983</a></p>
-<p>De acuerdo al siguiente paper, es posible decir que una buena
-candidata para predecir el sobrepeso de una mujer, es la circunferencia
-de la cintura. Es decir, Waist.Girth. Entonces, la primera variables
-elegida para predecir el estado nutricional de una mujer es el grosor de
-la cintura.</p>
+<p><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2727216" class="uri">https://pmc.ncbi.nlm.nih.gov/articles/PMC2727216</a></p>
+<p>De acuerdo a este artículo, es posible establecer una relación
+inversa entre la cirfumferencia de la cadera y el riesgo de diaebetes y
+enfermedad coronaria. Esta conclusión fue obtenida luego de ajustar el
+IMC, por lo que es razonable decir que existe una potencial relacióń
+entre la circumferencia de la cadera y el estado nutricional de las
+mujeres.</p>
 </div>
 <div id="paso-4" class="section level2">
 <h2>Paso 4</h2>
 <p>Usando el entorno R, construir un modelo de regresión logística con
 el predictor seleccionado en el paso anterior y utilizando de la muestra
 obtenida.</p>
-<pre class="r"><code>nulo &lt;- glm(EN ~ 1, family= binomial(link = &quot;logit&quot;), data = muestra_100)
-completo &lt;- glm(EN ~ ., family = binomial(link = &quot;logit&quot;), data = muestra_100)</code></pre>
-<pre><code>## Warning: glm.fit: algorithm did not converge</code></pre>
-<pre><code>## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred</code></pre>
-<pre class="r"><code>modelo &lt;- glm(EN ~ Waist.Girth, family = binomial(link = &quot;logit&quot;), data = muestra_100)
+<pre class="r"><code>nulo &lt;- glm(EN ~ 1, family= binomial(link = &quot;logit&quot;), data = seleccion_dataframe)
+completo &lt;- glm(EN ~ ., family = binomial(link = &quot;logit&quot;), data = seleccion_dataframe)
+
+modelo &lt;- glm(EN ~ Hip.Girth, family = binomial(link = &quot;logit&quot;), data = seleccion_dataframe)
 
 print(summary(modelo), signif.stars = FALSE)</code></pre>
 <pre><code>## 
 ## Call:
-## glm(formula = EN ~ Waist.Girth, family = binomial(link = &quot;logit&quot;), 
-##     data = muestra_100)
+## glm(formula = EN ~ Hip.Girth, family = binomial(link = &quot;logit&quot;), 
+##     data = seleccion_dataframe)
 ## 
 ## Coefficients:
-##              Estimate Std. Error z value Pr(&gt;|z|)
-## (Intercept) -21.12727    3.87145  -5.457 4.84e-08
-## Waist.Girth   0.27845    0.05102   5.458 4.82e-08
+##             Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept) -51.3257    10.2602  -5.002 5.66e-07
+## Hip.Girth     0.5314     0.1062   5.004 5.61e-07
 ## 
 ## (Dispersion parameter for binomial family taken to be 1)
 ## 
 ##     Null deviance: 138.629  on 99  degrees of freedom
-## Residual deviance:  63.694  on 98  degrees of freedom
-## AIC: 67.694
+## Residual deviance:  62.332  on 98  degrees of freedom
+## AIC: 66.332
 ## 
 ## Number of Fisher Scoring iterations: 6</code></pre>
 <pre class="r"><code>cat(&quot;----\n&quot;)</code></pre>
@@ -3062,17 +3061,17 @@ print(summary(modelo), signif.stars = FALSE)</code></pre>
 ## Terms added sequentially (first to last)
 ## 
 ## 
-##             Df Deviance Resid. Df Resid. Dev  Pr(&gt;Chi)
-## NULL                           99    138.629          
-## Waist.Girth  1   74.935        98     63.694 &lt; 2.2e-16</code></pre>
-<p>Observamos que el grosor de la cintura aporta significativamente al
-modelo, teniendo un valor z de 0.05 y un valor p bastante inferior a
-0,05. Además, la desviación para este modelo redujo de 138,629, que
-corresponde a la desviación del modelo nulo, a 72,514. Más aún, su valor
-AIC corresponde a 76,514. Ahora, en la segunda parte, observamos que la
-reducción de desviación conseguida es significativa (p &lt; 0,001), por
-lo tanto, podemos concluir que el modelo con este predictor presenta un
-mejor ajuste que con el modelo nulo.</p>
+##           Df Deviance Resid. Df Resid. Dev  Pr(&gt;Chi)
+## NULL                         99    138.629          
+## Hip.Girth  1   76.298        98     62.332 &lt; 2.2e-16</code></pre>
+<p>Observamos que la circumferencia de la cadera aporta
+significativamente al modelo, teniendo un valor z de 0.081 y un valor p
+bastante inferior a 0,05. Además, la desviación para este modelo redujo
+de 138,629, que corresponde a la desviación del modelo nulo, a 76,364.
+Más aún, su valor AIC corresponde a 80,364. Ahora, en la segunda parte,
+observamos que la reducción de desviación conseguida es significativa (p
+&lt; 0,001), por lo tanto, podemos concluir que el modelo con este
+predictor presenta un mejor ajuste que con el modelo nulo.</p>
 </div>
 <div id="paso-5" class="section level2">
 <h2>Paso 5</h2>
@@ -3080,61 +3079,279 @@ mejor ajuste que con el modelo nulo.</p>
 entorno R, buscar entre dos y cinco predictores de entre las variables
 seleccionadas al azar, recordadas en el punto 2, para agregar al modelo
 obtenido en el paso 4.</p>
-<pre class="r"><code>seleccion_dataframe &lt;- datos_IMC |&gt;
-  select(all_of(names_raw))
-Waist.Girth &lt;- datos_IMC$Waist.Girth
-#imc_array &lt;- datos_IMC$imc_array
-seleccion_dataframe &lt;- cbind(seleccion_dataframe,Waist.Girth)
-modelo &lt;- step(modelo, scope = list(lower=~Waist.Girth,upper = formula(completo)),
-               direction = &quot;both&quot;, trace=FALSE)
-cat(&quot;Modelo RLog conseguido con regresión escalonada:\n&quot;)</code></pre>
-<pre><code>## Modelo RLog conseguido con regresión escalonada:</code></pre>
-<pre class="r"><code>cat(&quot;------ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n&quot;)</code></pre>
-<pre><code>## ------ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</code></pre>
-<pre class="r"><code>print(summary(modelo))</code></pre>
+<div id="creación-modelo-inicial" class="section level3">
+<h3>Creación modelo inicial</h3>
+<pre class="r"><code>modelo_actual &lt;- glm(
+  EN ~ Hip.Girth,
+  data = seleccion_dataframe,
+  family = binomial
+)
+
+AIC(modelo_actual)</code></pre>
+<pre><code>## [1] 66.33157</code></pre>
+</div>
+<div id="evaluación-n1-de-variables" class="section level3">
+<h3>Evaluación n°1 de variables</h3>
+<pre class="r"><code>candidatas &lt;- setdiff(names_raw, &quot;Hip.Girth&quot;)
+resultados &lt;- lapply(candidatas, function(var) {
+  f &lt;- reformulate(c(&quot;Hip.Girth&quot;, var), response = &quot;EN&quot;)
+  m &lt;- glm(f, data = seleccion_dataframe, family = binomial)
+  c(variable = var, AIC = AIC(m))
+})
+
+tabla_AIC &lt;- do.call(rbind, resultados)
+tabla_AIC &lt;- as.data.frame(tabla_AIC)
+tabla_AIC$AIC &lt;- as.numeric(tabla_AIC$AIC)
+
+tabla_AIC[order(tabla_AIC$AIC), ]</code></pre>
+<pre><code>##              variable      AIC
+## 8         Waist.Girth 54.73306
+## 1         Chest.depth 58.21229
+## 5      Shoulder.Girth 62.87293
+## 3 Wrist.Minimum.Girth 63.36577
+## 2 Ankle.Minimum.Girth 63.58148
+## 7  Calf.Maximum.Girth 63.97967
+## 6         Thigh.Girth 67.08191
+## 4                 Age 67.14035</code></pre>
+</div>
+<div id="actualización-del-modelo-con-grosor-del-pecho" class="section level3">
+<h3>Actualización del modelo con grosor del pecho</h3>
+<p>Observando los valores del AIC asociados a la variables aleatorias,
+aquella que reduce en mayor medida este parámetro es Waist.Girth
+(grsosor de la cintura), por lo cual, construiremos un modelo
+añadiendola.</p>
+<pre class="r"><code>modelo &lt;- update(
+  modelo_actual,
+  . ~ . + Waist.Girth
+)
+
+print(summary(modelo), signif.stars = FALSE)</code></pre>
 <pre><code>## 
 ## Call:
-## glm(formula = EN ~ Waist.Girth + imc_array, family = binomial(link = &quot;logit&quot;), 
-##     data = muestra_100)
+## glm(formula = EN ~ Hip.Girth + Waist.Girth, family = binomial, 
+##     data = seleccion_dataframe)
 ## 
 ## Coefficients:
-##               Estimate Std. Error z value Pr(&gt;|z|)
-## (Intercept)  -4141.645 630721.784  -0.007    0.995
-## Waist.Girth      3.115   1361.176   0.002    0.998
-## imc_array      169.486  26390.300   0.006    0.995
+##              Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept) -59.00948   12.61138  -4.679 2.88e-06
+## Hip.Girth     0.46217    0.11401   4.054 5.04e-05
+## Waist.Girth   0.18425    0.06201   2.971  0.00297
 ## 
 ## (Dispersion parameter for binomial family taken to be 1)
 ## 
-##     Null deviance: 1.3863e+02  on 99  degrees of freedom
-## Residual deviance: 1.0289e-07  on 97  degrees of freedom
-## AIC: 6
+##     Null deviance: 138.629  on 99  degrees of freedom
+## Residual deviance:  48.733  on 97  degrees of freedom
+## AIC: 54.733
 ## 
-## Number of Fisher Scoring iterations: 25</code></pre>
-<pre class="r"><code>modelo &lt;- step(modelo, scope = list(lower=~Waist.Girth,upper = formula(completo)),
-               direction = &quot;forward&quot;, trace=FALSE)
-cat(&quot;Modelo RLog conseguido con regresión escalonada 2da vez:\n&quot;)</code></pre>
-<pre><code>## Modelo RLog conseguido con regresión escalonada 2da vez:</code></pre>
-<pre class="r"><code>cat(&quot;------ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n&quot;)</code></pre>
-<pre><code>## ------ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</code></pre>
-<pre class="r"><code>print(summary(modelo))</code></pre>
+## Number of Fisher Scoring iterations: 7</code></pre>
+<pre class="r"><code>cat(&quot;----\n&quot;)</code></pre>
+<pre><code>## ----</code></pre>
+<pre class="r"><code>print(anova(modelo, test = &quot;LRT&quot;), signif.stars = FALSE)</code></pre>
+<pre><code>## Analysis of Deviance Table
+## 
+## Model: binomial, link: logit
+## 
+## Response: EN
+## 
+## Terms added sequentially (first to last)
+## 
+## 
+##             Df Deviance Resid. Df Resid. Dev  Pr(&gt;Chi)
+## NULL                           99    138.629          
+## Hip.Girth    1   76.298        98     62.332 &lt; 2.2e-16
+## Waist.Girth  1   13.599        97     48.733 0.0002264</code></pre>
+<p>Observamos que el valor p asociado a la variable es 4.223, además de
+contar con un valor p menor a 0.05 por lo tanto, es significativo. Es
+decir, la variable de grosor de la cintura aporta al modelo
+significativamente. Además, se observa que la desviación disminuye desde
+138.629 a 57.426 con 97 grados de libertad, con un valor del AIC de
+63.426. Finalmente, se observa una reducción en la desviación conseguida
+que es significativa (p &lt; 0,001), es decir, este modelo consigue un
+mejor ajuste que el nulo.</p>
+<p>Entendiendo lo anterior, podemos buscar otra variable que mejore el
+ajuste del modelo.</p>
+</div>
+<div id="evaluación-n2-de-variables" class="section level3">
+<h3>Evaluación n°2 de variables</h3>
+<pre class="r"><code>vars_actuales &lt;- attr(terms(modelo), &quot;term.labels&quot;)
+candidatas &lt;- setdiff(names_raw, vars_actuales)
+resultados &lt;- lapply(candidatas, function(var) {
+
+  nuevas_vars &lt;- c(vars_actuales, var)
+
+  f &lt;- reformulate(
+    termlabels = nuevas_vars,
+    response   = &quot;EN&quot;
+  )
+
+  m &lt;- glm(
+    f,
+    data = seleccion_dataframe,
+    family = binomial
+  )
+
+  data.frame(
+    variable = var,
+    AIC = AIC(m)
+  )
+})
+
+tabla_AIC &lt;- do.call(rbind, resultados)
+tabla_AIC &lt;- tabla_AIC[order(tabla_AIC$AIC), ]
+tabla_AIC</code></pre>
+<pre><code>##              variable      AIC
+## 6         Thigh.Girth 51.35772
+## 1         Chest.depth 56.10496
+## 7  Calf.Maximum.Girth 56.12349
+## 2 Ankle.Minimum.Girth 56.36293
+## 5      Shoulder.Girth 56.39096
+## 3 Wrist.Minimum.Girth 56.42780
+## 4                 Age 56.69983</code></pre>
+<p>Ahora, la variable que reduce en mayor medidad el AIC es
+Calf.Maximum.Girth (Grosor mínimo de ambas pantorrillas). Nuevamente,
+actualizaremos el modelo.</p>
+</div>
+<div id="actualización-del-modelo-con-grosor-de-las-muñecas" class="section level3">
+<h3>Actualización del modelo con grosor de las muñecas</h3>
+<pre class="r"><code>modelo &lt;- update(
+  modelo,
+  . ~ . + Wrist.Minimum.Girth
+)
+
+print(summary(modelo), signif.stars = FALSE)</code></pre>
 <pre><code>## 
 ## Call:
-## glm(formula = EN ~ Waist.Girth + imc_array, family = binomial(link = &quot;logit&quot;), 
-##     data = muestra_100)
+## glm(formula = EN ~ Hip.Girth + Waist.Girth + Wrist.Minimum.Girth, 
+##     family = binomial, data = seleccion_dataframe)
 ## 
 ## Coefficients:
-##               Estimate Std. Error z value Pr(&gt;|z|)
-## (Intercept)  -4141.645 630721.784  -0.007    0.995
-## Waist.Girth      3.115   1361.176   0.002    0.998
-## imc_array      169.486  26390.300   0.006    0.995
+##                     Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept)         -57.7214    12.8126  -4.505 6.64e-06
+## Hip.Girth             0.4630     0.1148   4.032 5.53e-05
+## Waist.Girth           0.2143     0.0849   2.525   0.0116
+## Wrist.Minimum.Girth  -0.2253     0.4082  -0.552   0.5810
 ## 
 ## (Dispersion parameter for binomial family taken to be 1)
 ## 
-##     Null deviance: 1.3863e+02  on 99  degrees of freedom
-## Residual deviance: 1.0289e-07  on 97  degrees of freedom
-## AIC: 6
+##     Null deviance: 138.629  on 99  degrees of freedom
+## Residual deviance:  48.428  on 96  degrees of freedom
+## AIC: 56.428
 ## 
-## Number of Fisher Scoring iterations: 25</code></pre>
+## Number of Fisher Scoring iterations: 7</code></pre>
+<pre class="r"><code>cat(&quot;----\n&quot;)</code></pre>
+<pre><code>## ----</code></pre>
+<pre class="r"><code>print(anova(modelo, test = &quot;LRT&quot;), signif.stars = FALSE)</code></pre>
+<pre><code>## Analysis of Deviance Table
+## 
+## Model: binomial, link: logit
+## 
+## Response: EN
+## 
+## Terms added sequentially (first to last)
+## 
+## 
+##                     Df Deviance Resid. Df Resid. Dev  Pr(&gt;Chi)
+## NULL                                   99    138.629          
+## Hip.Girth            1   76.298        98     62.332 &lt; 2.2e-16
+## Waist.Girth          1   13.599        97     48.733 0.0002264
+## Wrist.Minimum.Girth  1    0.305        96     48.428 0.5806021</code></pre>
+<p>Añadiremos una última variable con el objetivo de, nuevamente,
+mejorar el ajuste.</p>
+</div>
+<div id="evaluación-n3-de-variables" class="section level3">
+<h3>Evaluación n°3 de variables</h3>
+<pre class="r"><code>vars_actuales &lt;- attr(terms(modelo), &quot;term.labels&quot;)
+candidatas &lt;- setdiff(names_raw, vars_actuales)
+resultados &lt;- lapply(candidatas, function(var) {
+
+  nuevas_vars &lt;- c(vars_actuales, var)
+
+  f &lt;- reformulate(
+    termlabels = nuevas_vars,
+    response   = &quot;EN&quot;
+  )
+
+  m &lt;- glm(
+    f,
+    data = seleccion_dataframe,
+    family = binomial
+  )
+
+  data.frame(
+    variable = var,
+    AIC = AIC(m)
+  )
+})
+
+tabla_AIC &lt;- do.call(rbind, resultados)
+tabla_AIC &lt;- tabla_AIC[order(tabla_AIC$AIC), ]
+tabla_AIC</code></pre>
+<pre><code>##              variable      AIC
+## 5         Thigh.Girth 52.60864
+## 6  Calf.Maximum.Girth 57.27683
+## 1         Chest.depth 57.32908
+## 2 Ankle.Minimum.Girth 57.52325
+## 4      Shoulder.Girth 58.31433
+## 3                 Age 58.42639</code></pre>
+<p>Se observa que en este caso, la variable que reduce en mayor medida
+el AIC es Thigh.Girth(Grosor promedio de ambos muslos bajo el pliegue
+del glúteo).</p>
+</div>
+<div id="actutalización-del-modelo-con-grososr-de-los-mulos" class="section level3">
+<h3>Actutalización del modelo con grososr de los mulos</h3>
+<pre class="r"><code>modelo &lt;- update(
+  modelo,
+  . ~ . + Thigh.Girth
+)
+
+print(summary(modelo), signif.stars = FALSE)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = EN ~ Hip.Girth + Waist.Girth + Wrist.Minimum.Girth + 
+##     Thigh.Girth, family = binomial, data = seleccion_dataframe)
+## 
+## Coefficients:
+##                     Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept)         -60.2105    14.1693  -4.249 2.14e-05
+## Hip.Girth             0.1881     0.1598   1.177  0.23916
+## Waist.Girth           0.2866     0.1000   2.866  0.00416
+## Wrist.Minimum.Girth  -0.4021     0.4740  -0.848  0.39619
+## Thigh.Girth           0.4649     0.2135   2.177  0.02945
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 138.629  on 99  degrees of freedom
+## Residual deviance:  42.609  on 95  degrees of freedom
+## AIC: 52.609
+## 
+## Number of Fisher Scoring iterations: 7</code></pre>
+<pre class="r"><code>cat(&quot;----\n&quot;)</code></pre>
+<pre><code>## ----</code></pre>
+<pre class="r"><code>print(anova(modelo, test = &quot;LRT&quot;), signif.stars = FALSE)</code></pre>
+<pre><code>## Analysis of Deviance Table
+## 
+## Model: binomial, link: logit
+## 
+## Response: EN
+## 
+## Terms added sequentially (first to last)
+## 
+## 
+##                     Df Deviance Resid. Df Resid. Dev  Pr(&gt;Chi)
+## NULL                                   99    138.629          
+## Hip.Girth            1   76.298        98     62.332 &lt; 2.2e-16
+## Waist.Girth          1   13.599        97     48.733 0.0002264
+## Wrist.Minimum.Girth  1    0.305        96     48.428 0.5806021
+## Thigh.Girth          1    5.819        95     42.609 0.0158525</code></pre>
+<p>Respecto a este modelo, se observa un valor z de 2.177 asociado a
+Thigh.Girth con un nivel de significancia de 0.03, es decir, es
+significativo. Por otro lado, la desviación del modelo nulo mejora de
+138.629 a 42.609 con 95 grados de libertad.</p>
+<p>Por otro lado, cuando se realiza una prueba ANOVA al modelo, se
+observa que el valor p obtenido es significativo para <span class="math inline">\(\alpha = 0.05\)</span>. Es decir, la variable
+aporta al modelo para obtener un mejor ajuste que el modelo nulo</p>
+<p>Por lo tanto, mantendremos el modelo obtenido anteriormente.</p>
+</div>
 </div>
 <div id="paso-6" class="section level2">
 <h2>Paso 6</h2>

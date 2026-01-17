@@ -58,7 +58,9 @@ datos_IMC <- cbind(new_dataframe,EN)
 Asegurando reproducibilidad, seleccionar una muestra de 150 mujeres (si su n° de equipo es un número par) o 150 hombres (si su n° de equipo es impar), asegurando que la mitad tenga estado nutricional “sobrepeso” y la otra mitad “no sobrepeso” en cada caso. Dividir esta muestra en dos conjuntos: los datos de 100 personas (50 con EN “sobrepeso”) para utilizar en la construcción de los modelos y 50 personas (25 con EN “sobrepeso”) para poder evaluarlos.
 
 ```{r}
+set.seed(3234)
 # Nuestro número de equipo es par, por lo tanto debemos elegir una muestra de 150 mujeres.
+mujeres_inicial <- datos[which(datos$Gender == 0),]
 mujeres <- datos_IMC[which(datos_IMC$Gender == 0),]
 cut <- 150/2
 
@@ -73,6 +75,8 @@ muestra_100 <- bind_rows(muestra[which(muestra$EN == 0),] |> sample_n(50), muest
 muestra_50 <- muestra |>
   anti_join(muestra_100)
 
+
+
 ```
 
 ## Paso 2
@@ -80,10 +84,11 @@ muestra_50 <- muestra |>
 Recordar las ocho posibles variables predictoras seleccionadas de forma aleatoria en el ejercicio anterior.
 
 ```{r}
+
 set.seed(3234)
-# No utilizaremos esta variable, pero necesitamos seguir los mismos pasos para obtener las mismas variables.
-mujeres_random <- mujeres |> 
-  sample_n(100)
+# EXACT SAME RANDOM STEPS
+mujeres_random <- mujeres_inicial |> sample_n(100)
+mujeres_random70 <- mujeres_random |> sample_n(70)
 
 mujeres_filtrado <- mujeres_random |>
   select(-Height,-Weight,-Gender)
@@ -91,17 +96,19 @@ mujeres_filtrado <- mujeres_random |>
 columnas_raw <- names(mujeres_filtrado)
 columnas <- data.frame(columnas_raw)
 
-#Se seleccionan de forma aleatoria 8 variables predictoras
-variables_aleatorias <- columnas |>
-  sample_n(8)
-
-#Nombre variables predictoras
+variables_aleatorias <- columnas |> sample_n(8)
 names_raw <- variables_aleatorias$columnas_raw
 print(names_raw)
+
 ```
 
 
 ```{r}
+seleccion_dataframe <- muestra_100 |>
+  select(EN, Hip.Girth, all_of(names_raw))
+
+#imc_array <- datos_IMC$imc_array
+#seleccion_dataframe <- cbind(seleccion_dataframe,Hip.Girth,EN)
 library("DT")
 Descripcion  = c("Grosor del pecho, sobre tejido mamario en mujeres y a la altura de los pezones en varones","Grosor promedio de la parte más delgada de ambos tobillos", "Grosor promedio de la parte más delgada de ambas muñecas", "Edad", "Grosor de los hombros sobre los músculos deltoides", "Grosor promedio de ambos muslos bajo el pliegue del glúteo", "Grosor promedio de la parte más ancha de ambas pantorrillas", "Grosor a la altura de la cintura") #Descripción de cada componente  
 
@@ -118,24 +125,24 @@ datatable(Tabla_variables,
 Seleccionar, de las otras variables, una que el equipo considere que podría ser útil para predecir la clase EN, justificando bien esta selección (idealmente con literatura).
 Fuente: 
 
-Domínguez-Reyes, Teresa, Quiroz-Vargas, Irma, Salgado-Bernabé, Aralia Berenice, Salgado-Goytia, Lorenzo, Muñoz-Valle, José Francisco, & Parra-Rojas, Isela. (2017). Las medidas antropométricas como indicadores predictivos de riesgo metabólico en una población mexicana. Nutrición Hospitalaria, 34(1), 96-101. https://dx.doi.org/10.20960/nh.983
+https://pmc.ncbi.nlm.nih.gov/articles/PMC2727216
 
-De acuerdo al siguiente paper, es posible decir que una buena candidata para predecir el sobrepeso de una mujer, es la circunferencia de la cintura. Es decir, Waist.Girth. Entonces, la primera variables elegida para predecir el estado nutricional de una mujer es el grosor de la cintura. 
+De acuerdo a este artículo, es posible establecer una relación inversa entre la cirfumferencia de la cadera y el riesgo de diaebetes y enfermedad coronaria. Esta conclusión fue obtenida luego de ajustar el IMC, por lo que es razonable decir que existe una potencial relacióń entre la circumferencia de la cadera y el estado nutricional de las mujeres. 
 
 ## Paso 4
 Usando el entorno R, construir un modelo de regresión logística con el predictor seleccionado en el paso anterior y utilizando de la muestra obtenida.
 
 ```{r}
-nulo <- glm(EN ~ 1, family= binomial(link = "logit"), data = muestra_100)
-completo <- glm(EN ~ ., family = binomial(link = "logit"), data = muestra_100)
+nulo <- glm(EN ~ 1, family= binomial(link = "logit"), data = seleccion_dataframe)
+completo <- glm(EN ~ ., family = binomial(link = "logit"), data = seleccion_dataframe)
 
-modelo <- glm(EN ~ Waist.Girth, family = binomial(link = "logit"), data = muestra_100)
+modelo <- glm(EN ~ Hip.Girth, family = binomial(link = "logit"), data = seleccion_dataframe)
 
 print(summary(modelo), signif.stars = FALSE)
 cat("----\n")
 print(anova(modelo, test = "LRT"), signif.stars = FALSE)
 ```
-Observamos que el grosor de la cintura aporta significativamente al modelo, teniendo un valor z de 0.05 y un valor p bastante inferior a 0,05. Además, la desviación para este modelo redujo de 138,629, que corresponde a la desviación del modelo nulo, a 72,514. Más aún, su valor AIC corresponde a 76,514. 
+Observamos que la circumferencia de la cadera aporta significativamente al modelo, teniendo un valor z de 0.081 y un valor p bastante inferior a 0,05. Además, la desviación para este modelo redujo de 138,629, que corresponde a la desviación del modelo nulo, a 76,364. Más aún, su valor AIC corresponde a 80,364. 
 Ahora, en la segunda parte, observamos que la reducción de desviación conseguida es significativa (p < 0,001), por lo tanto, podemos concluir que el modelo con este predictor presenta un mejor ajuste que con el modelo nulo.
 
 
@@ -143,26 +150,154 @@ Ahora, en la segunda parte, observamos que la reducción de desviación consegui
 
 Usando herramientas estándares para la exploración de modelos del entorno R, buscar entre dos y cinco predictores de entre las variables seleccionadas al azar, recordadas en el punto 2, para agregar al modelo obtenido en el paso 4.
 
-```{r, warning=FALSE}
-seleccion_dataframe <- datos_IMC |>
-  select(all_of(names_raw))
-Waist.Girth <- datos_IMC$Waist.Girth
-#imc_array <- datos_IMC$imc_array
-seleccion_dataframe <- cbind(seleccion_dataframe,Waist.Girth)
-modelo <- step(modelo, scope = list(lower=~Waist.Girth,upper = formula(completo)),
-               direction = "both", trace=FALSE)
-cat("Modelo RLog conseguido con regresión escalonada:\n")
-cat("------ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
-print(summary(modelo))
+### Creación modelo inicial
+
+```{r}
+modelo_actual <- glm(
+  EN ~ Hip.Girth,
+  data = seleccion_dataframe,
+  family = binomial
+)
+
+AIC(modelo_actual)
 
 ```
-```{r,warning=FALSE}
-modelo <- step(modelo, scope = list(lower=~Waist.Girth,upper = formula(completo)),
-               direction = "forward", trace=FALSE)
-cat("Modelo RLog conseguido con regresión escalonada 2da vez:\n")
-cat("------ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
-print(summary(modelo))
+### Evaluación n°1 de variables
+
+```{r}
+candidatas <- setdiff(names_raw, "Hip.Girth")
+resultados <- lapply(candidatas, function(var) {
+  f <- reformulate(c("Hip.Girth", var), response = "EN")
+  m <- glm(f, data = seleccion_dataframe, family = binomial)
+  c(variable = var, AIC = AIC(m))
+})
+
+tabla_AIC <- do.call(rbind, resultados)
+tabla_AIC <- as.data.frame(tabla_AIC)
+tabla_AIC$AIC <- as.numeric(tabla_AIC$AIC)
+
+tabla_AIC[order(tabla_AIC$AIC), ]
+
 ```
+
+### Actualización del modelo con grosor del pecho
+
+Observando los valores del AIC asociados a la variables aleatorias, aquella que reduce en mayor medida este parámetro es Waist.Girth (grsosor de la cintura), por lo cual, construiremos un modelo añadiendola.
+
+```{r}
+modelo <- update(
+  modelo_actual,
+  . ~ . + Waist.Girth
+)
+
+print(summary(modelo), signif.stars = FALSE)
+cat("----\n")
+print(anova(modelo, test = "LRT"), signif.stars = FALSE)
+
+```
+Observamos que el valor p asociado a la variable es 4.223, además de contar con un valor p menor a 0.05 por lo tanto, es significativo. Es decir, la variable de grosor de la cintura aporta al modelo significativamente. Además, se observa que la desviación disminuye desde 138.629 a 57.426 con 97 grados de libertad, con un valor del AIC de 63.426. Finalmente, se observa una reducción en la desviación conseguida que es significativa (p < 0,001), es decir, este modelo consigue un mejor ajuste que el nulo. 
+
+
+Entendiendo lo anterior, podemos buscar otra variable que mejore el ajuste del modelo.
+
+### Evaluación n°2 de variables
+
+```{r}
+vars_actuales <- attr(terms(modelo), "term.labels")
+candidatas <- setdiff(names_raw, vars_actuales)
+resultados <- lapply(candidatas, function(var) {
+
+  nuevas_vars <- c(vars_actuales, var)
+
+  f <- reformulate(
+    termlabels = nuevas_vars,
+    response   = "EN"
+  )
+
+  m <- glm(
+    f,
+    data = seleccion_dataframe,
+    family = binomial
+  )
+
+  data.frame(
+    variable = var,
+    AIC = AIC(m)
+  )
+})
+
+tabla_AIC <- do.call(rbind, resultados)
+tabla_AIC <- tabla_AIC[order(tabla_AIC$AIC), ]
+tabla_AIC
+
+```
+Ahora, la variable que reduce en mayor medidad el AIC es Calf.Maximum.Girth (Grosor mínimo de ambas pantorrillas). Nuevamente,
+actualizaremos el modelo.
+
+### Actualización del modelo con grosor de las muñecas
+```{r}
+modelo <- update(
+  modelo,
+  . ~ . + Wrist.Minimum.Girth
+)
+
+print(summary(modelo), signif.stars = FALSE)
+cat("----\n")
+print(anova(modelo, test = "LRT"), signif.stars = FALSE)
+```
+Añadiremos una última variable con el objetivo de, nuevamente, mejorar el ajuste.
+
+### Evaluación n°3 de variables
+```{r}
+vars_actuales <- attr(terms(modelo), "term.labels")
+candidatas <- setdiff(names_raw, vars_actuales)
+resultados <- lapply(candidatas, function(var) {
+
+  nuevas_vars <- c(vars_actuales, var)
+
+  f <- reformulate(
+    termlabels = nuevas_vars,
+    response   = "EN"
+  )
+
+  m <- glm(
+    f,
+    data = seleccion_dataframe,
+    family = binomial
+  )
+
+  data.frame(
+    variable = var,
+    AIC = AIC(m)
+  )
+})
+
+tabla_AIC <- do.call(rbind, resultados)
+tabla_AIC <- tabla_AIC[order(tabla_AIC$AIC), ]
+tabla_AIC
+```
+
+Se observa que en este caso, la variable que reduce en mayor medida el AIC es Thigh.Girth(Grosor promedio de ambos muslos bajo el pliegue del glúteo).
+
+### Actutalización del modelo con grososr de los mulos
+
+```{r}
+modelo <- update(
+  modelo,
+  . ~ . + Thigh.Girth
+)
+
+print(summary(modelo), signif.stars = FALSE)
+cat("----\n")
+print(anova(modelo, test = "LRT"), signif.stars = FALSE)
+```
+Respecto a este modelo, se observa un valor z de 2.177 asociado a Thigh.Girth con un nivel de significancia de 0.03, es decir, es significativo. Por otro lado, la desviación del modelo nulo mejora de 138.629 a 42.609 con 95 grados de libertad.
+
+Por otro lado, cuando se realiza una prueba ANOVA al modelo, se observa que el valor p obtenido es significativo para $\alpha = 0.05$. Es decir, la variable aporta al modelo para obtener un mejor ajuste que el modelo nulo
+
+Por lo tanto, mantendremos el modelo obtenido anteriormente.
+
+
 
 ## Paso 6
 
