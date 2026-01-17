@@ -331,21 +331,21 @@ Usando un p value de 0.05 no se rechaza la hipótesis nula de que exista una rel
 ```{r}
 durbinWatsonTest(modelo_actual)
 ```
-Dado que el test no resulta significativo, no existe eviddencia de autocorrelación entre los residuos.
+Dado que el test no resulta significativo, no existe evidencia de autocorrelación entre los residuos.
 
  3. Solo hay un predictor en este modelo simple, por lo que no existe multicolinealidad
  
- 4. Se cuenta con 2 niveles en la variable categórica EN, cada nivel tiene 50 observaciones y como se ve en la gráfica anterior hay mas de las 15 observaciones minimas requeridas.
+ 4. Se cuenta con 2 niveles en la variable categórica EN, cada nivel tiene 50 observaciones y como se ve en la gráfica anterior hay más de las 15 observaciones mínimas requeridas.
  
  5. No ocurrieron errores al momento de crear el modelo con gml, por lo que no ocurre separación perfecta.
  
- 6.Usaremos el gráfico de burbuja para ver si hay observaciones problematicas
+ 6.Usaremos el gráfico de burbuja para ver si hay observaciones problemáticas
  
 ```{r}
 influencePlot(modelo_actual)
 ```
  
-Se ven 4 casos que podrian tener cierta influencia en el modelo sin embargo en el grafico de residuos esta posible influencia no se observa con claridad.
+Se ven 4 casos que podrían tener cierta influencia en el modelo sin embargo en el gráfico de residuos esta posible influencia no se observa con claridad.
 
 
 #### Modelo RLogitM
@@ -370,22 +370,22 @@ El p value no es significativo por lo que el supuesto de independencia se cumple
 ```{r}
 vif(modelo_nuevo)
 ```
- Los valores son iguales para ambos predictores lo que es esperable paara dos predictores continuos sin interacción, no existe multicolinealidad.
+Los valores son iguales para ambos predictores lo que es esperable para dos predictores continuos sin interacción, no existe multicolinealidad.
  
- 4. Existen 2 niveles e la variable categorica EN, que tiene50 observaciones cada una, por lo que se cuenta con suficientes observaciones para tener información completa.
+ 4. Existen 2 niveles en la variable categorica EN, que tiene 50 observaciones cada una, por lo que se cuenta con suficientes observaciones para tener información completa.
  
  5. No existieron errores al momento de generar los modelos por lo que no existe separación perfecta.
  
- 6.Usaremos el gráfico de burbuja para ver si hay observaciones problematicas
+ 6.Usaremos el gráfico de burbuja para ver si hay observaciones problemáticas
  
 ```{r}
 influencePlot(modelo_nuevo)
 ```
-Existen 4 observaciones problematicas, pero por los gráficos de residuos la influencia de estos casos no se observa con claridad.
+Existen 4 observaciones problemáticas, pero por los gráficos de residuos la influencia de estos casos no se observa con claridad.
 
 ### Generalización
 
-Para evaluar la generalización se usaran gráficos ROC y matrices de confución y validación cruzada para ver el desempeño de los modelos.
+Para evaluar la generalización se usaran gráficos ROC y matrices de confusión y validación cruzada para ver el desempeño de los modelos.
 
 #### Modelo RLogitS
 
@@ -423,7 +423,7 @@ cat(sprintf("Exactitud (Accuracy) : %.3f\n", mat_conf_ent$overall["Accuracy"]))
 cat(sprintf("Sensibilidad         : %.3f\n", mat_conf_ent$byClass["Sensitivity"]))
 cat(sprintf("Especificidad        : %.3f\n", mat_conf_ent$byClass["Specificity"]))
 ```
-Según la matriz de confusion el modelo tiene un 85% de exactitud, un 84% de sensibilidad y un 86% de especificidad, esto junto con el gráfico ROC con un AUC 0.92 indican que el modelo RLogitS es un buen clasificador, con un 85% de exactitud en sus predicciones.
+Según la matriz de confusión el modelo tiene un 85% de exactitud, un 84% de sensibilidad y un 86% de especificidad, esto junto con el gráfico ROC con un AUC 0.92 indican que el modelo RLogitS es un buen clasificador, con un 85% de exactitud en sus predicciones.
 
 
 ```{r}
@@ -543,13 +543,13 @@ metricas_tab <- conf_mat_list |>
 
 print(metricas_tab)
 ```
-En la prediccion ambos predictores son significativos segun su p value, su exactidud, sensibilidad y especifidad en los 4 pliegues es mayor a 80% por lo que los predictores seleccionados son fiables y generalizables para la detección de sobrepeso.
+En la predicción ambas variables son significativos segun su p value, su exactidud, sensibilidad y especifidad en los 4 pliegues es mayor a 80% por lo que los predictores seleccionados son fiables y generalizables para la detección de sobrepeso.
 
 ## Paso 7
 
 Usando código estándar, evaluar el poder predictivo de los modelos con los datos de las 50 personas que no se incluyeron en su construcción en términos de sensibilidad y especificidad.
 
-Para ello se utilizaran los mismo metodos anteriores pero con las 50 observaciones que se dejaron fuera anteriormente.
+Para ello se utilizaran los mismo métodos anteriores pero con las 50 observaciones que se dejaron fuera anteriormente.
 
 
 ### Modelo RLogitS
@@ -590,7 +590,7 @@ cat(sprintf("Exactitud (Accuracy) : %.3f\n", mat_conf_pru$overall["Accuracy"]))
 cat(sprintf("Sensibilidad         : %.3f\n", mat_conf_pru$byClass["Sensitivity"]))
 cat(sprintf("Especificidad        : %.3f\n", mat_conf_pru$byClass["Specificity"]))
 ```
-El modelo predictivo tiene una exactitud de 78%, sensibilidad 76% y especificidad de 80%, son valores menores a los observados con los datos de entrenamiento, aun asi la diferencia no es demasiado y se puede sguir considerando un buen modelo si se ve la gráfica de ROC con un AUC de 88%.
+El modelo predictivo tiene una exactitud de 78%, sensibilidad 76% y especificidad de 80%, son valores menores a los observados con los datos de entrenamiento, aún así la diferencia no es demasiado y se puede sguir considerando un buen modelo si se ve la gráfica de ROC con un AUC de 88%.
 
 ### Modelo RLogitM
 ```{r}
@@ -633,6 +633,6 @@ El modelo cuenta con un 92% de exactitud, un 100% de sensibilidad y 84% de espec
 
 ## Conclusión
 
-El modelo logistico multiple obtenido con los predictores Waist.Girth y Thigh.Girth es robusto y tiene una gran capacidad de predicción de la variable 'EN' creada, asi apto para determinar si una mujer tiene sobrepeso o no, y es adecuado para explicar una relación entre el grosor a la altura de la cintura, el grosor promedio de ambos muslos bajo el pliegue del gluteo y el sobrepreso de una mujer.
+El modelo logístico múltiple obtenido con los predictores Waist.Girth y Thigh.Girth es robusto y tiene una gran capacidad de predicción de la variable 'EN' creada, asi apto para determinar si una mujer tiene sobrepeso o no, y es adecuado para explicar una relación entre el grosor a la altura de la cintura, el grosor promedio de ambos muslos bajo el pliegue del glúteo y el sobrepreso de una mujer.
 
 El modelo logistico simple construido si bien presenta una capacidad buena pero no sobresaliente en sus predicciones con Hip.Girth y ademas con datos de prueba que no se tomaron en cuenta en el entrenamiento su capacidad predictoria disminuyo cierto porcentaje, por ello puede ser que al construir el modelo multiple esta variable haya perdido significancia, ya que otras variables coo Waist.Girth y Thigh.Girth tienen mayor poder para predecir el sobrepeso en una mujer.
