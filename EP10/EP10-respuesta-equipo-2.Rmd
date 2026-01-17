@@ -12,6 +12,7 @@ Para este ejercicio usaremos los datos de medidas anatómicas recolectados por H
 ```{r}
 library(car)
 library(caret)
+library(tidyverse)
 library(leaps)
 library(dplyr)
 library(ggpubr)
@@ -30,7 +31,7 @@ calculate_IMC <- function(roww){
 imc_array <- apply(datos,1,calculate_IMC)
 new_dataframe <- cbind(datos,imc_array)
 ```
-2. Si bien esta variable se usa para clasificar a las personas en varias clases de estado nutricional (bajo peso, normal, sobrepeso, obesidad, obesidad mórbida), para efectos de este ejercicio, usaremos dos clases: sobrepeso (IMC ≥ 23,2) y no sobrepeso (IMC < 23,2).
+2. Si bien esta variable se usa para clasificar a las personas en varias clases de estado nutricional (bajo peso, normal, sobrepeso, obesidad, obesidad mórbida), para efectos de este ejercicio, usaremos dos clases: sobrepeso (IMC ≥ 23.2) y no sobrepeso (IMC < 23.2).
 ```{r}
 umbral <- 23.2
 ```
@@ -70,8 +71,8 @@ mujeres_sobrepeso <- mujeres_sobrepeso |>
   sample_n(cut)
 mujeres_no_sobrepeso <- mujeres_no_sobrepeso |>
   sample_n(cut)
-muestra <- bind_rows(mujeres_sobrepeso,mujeres_no_sobrepeso)
-muestra_100 <- bind_rows(muestra[which(muestra$EN == 0),] |> sample_n(50), muestra[which(muestra$EN == 1),] |> sample_n(50))
+muestra <- bind_rows(mujeres_sobrepeso,mujeres_no_sobrepeso) |> slice_sample(prop = 1)
+muestra_100 <- bind_rows(muestra[which(muestra$EN == 0),] |> sample_n(50), muestra[which(muestra$EN == 1),] |> sample_n(50))|> slice_sample(prop = 1)
 muestra_50 <- muestra |>
   anti_join(muestra_100)
 
@@ -127,7 +128,7 @@ Fuente:
 
 https://pmc.ncbi.nlm.nih.gov/articles/PMC2727216
 
-De acuerdo a este artículo, es posible establecer una relación inversa entre la cirfumferencia de la cadera y el riesgo de diaebetes y enfermedad coronaria. Esta conclusión fue obtenida luego de ajustar el IMC, por lo que es razonable decir que existe una potencial relacióń entre la circumferencia de la cadera y el estado nutricional de las mujeres. 
+De acuerdo a este artículo, es posible establecer una relación inversa entre la circunferencia de la cadera y el riesgo de diabetes y enfermedad coronaria. Esta conclusión fue obtenida luego de ajustar el IMC, por lo que es razonable decir que existe una potencial relacióń entre la circunferencia de la cadera y el estado nutricional de las mujeres. 
 
 ## Paso 4
 Usando el entorno R, construir un modelo de regresión logística con el predictor seleccionado en el paso anterior y utilizando de la muestra obtenida.
@@ -142,8 +143,8 @@ print(summary(modelo), signif.stars = FALSE)
 cat("----\n")
 print(anova(modelo, test = "LRT"), signif.stars = FALSE)
 ```
-Observamos que la circumferencia de la cadera aporta significativamente al modelo, teniendo un valor z de 0.081 y un valor p bastante inferior a 0,05. Además, la desviación para este modelo redujo de 138,629, que corresponde a la desviación del modelo nulo, a 76,364. Más aún, su valor AIC corresponde a 80,364. 
-Ahora, en la segunda parte, observamos que la reducción de desviación conseguida es significativa (p < 0,001), por lo tanto, podemos concluir que el modelo con este predictor presenta un mejor ajuste que con el modelo nulo.
+Observamos que la circumferencia de la cadera aporta significativamente al modelo, teniendo un valor z de 5.002 y un valor p bastante inferior a 0.05. Además, la desviación para este modelo redujo de 138.629, que corresponde a la desviación del modelo nulo, a 62.332. Más aún, su valor AIC corresponde a 66.332. 
+Ahora, en la segunda parte, observamos que la reducción de desviación conseguida es significativa (p < 0.001), por lo tanto, podemos concluir que el modelo con este predictor presenta un mejor ajuste que con el modelo nulo.
 
 
 ## Paso 5
@@ -195,7 +196,7 @@ cat("----\n")
 print(anova(modelo, test = "LRT"), signif.stars = FALSE)
 
 ```
-Observamos que el valor p asociado a la variable es 4.223, además de contar con un valor p menor a 0.05 por lo tanto, es significativo. Es decir, la variable de grosor de la cintura aporta al modelo significativamente. Además, se observa que la desviación disminuye desde 138.629 a 57.426 con 97 grados de libertad, con un valor del AIC de 63.426. Finalmente, se observa una reducción en la desviación conseguida que es significativa (p < 0,001), es decir, este modelo consigue un mejor ajuste que el nulo. 
+Observamos que el valor z asociado a la variable es 3.138, además de contar con un valor p menor a 0.05 por lo tanto, es significativo. Es decir, la variable de grosor de la cintura aporta al modelo significativamente. Además, se observa que la desviación disminuye desde 138.629 a 57.279 con 97 grados de libertad, con un valor del AIC de 63.279. Finalmente, se observa una reducción en la desviación conseguida que es significativa (p < 0,001), es decir, este modelo consigue un mejor ajuste que el nulo. 
 
 
 Entendiendo lo anterior, podemos buscar otra variable que mejore el ajuste del modelo.
@@ -231,25 +232,35 @@ tabla_AIC <- tabla_AIC[order(tabla_AIC$AIC), ]
 tabla_AIC
 
 ```
-Ahora, la variable que reduce en mayor medidad el AIC es Calf.Maximum.Girth (Grosor mínimo de ambas pantorrillas). Nuevamente,
-actualizaremos el modelo.
+Ahora, la variable que reduce en mayor medidad el AIC es Thigh.Girth (Grosor promedio de ambos muslos bajo el pliegue del glúteo). Nuevamente, actualizaremos el modelo.
 
 ### Actualización del modelo con grosor de las muñecas
 ```{r}
 modelo <- update(
   modelo,
-  . ~ . + Wrist.Minimum.Girth
+  . ~ . + Thigh.Girth
 )
 
 print(summary(modelo), signif.stars = FALSE)
 cat("----\n")
 print(anova(modelo, test = "LRT"), signif.stars = FALSE)
 ```
-Añadiremos una última variable con el objetivo de, nuevamente, mejorar el ajuste.
+Se puede ver que Hip.Girth a dejado de ser significativa al agregar Thigh.Girth, asi que evaluaremos el modelo sin la primera variable
+
+```{r}
+modelo_nuevo <- glm(
+  EN ~ Waist.Girth + Thigh.Girth,
+  data = seleccion_dataframe,
+  family = binomial
+)
+
+print(summary(modelo_nuevo), signif.stars = FALSE)
+```
+El AIC es un poco menor al anterior por 2 aproximadamentes, pero el estadistico de desviación subio en 0.2 unidades, por lo que, siguiendo el principio de parsinomia, elegiremos el modelo mas simple y con menor AIC.
 
 ### Evaluación n°3 de variables
 ```{r}
-vars_actuales <- attr(terms(modelo), "term.labels")
+vars_actuales <- attr(terms(modelo_nuevo), "term.labels")
 candidatas <- setdiff(names_raw, vars_actuales)
 resultados <- lapply(candidatas, function(var) {
 
@@ -277,52 +288,351 @@ tabla_AIC <- tabla_AIC[order(tabla_AIC$AIC), ]
 tabla_AIC
 ```
 
-Se observa que en este caso, la variable que reduce en mayor medida el AIC es Thigh.Girth(Grosor promedio de ambos muslos bajo el pliegue del glúteo).
-
-### Actutalización del modelo con grososr de los mulos
-
-```{r}
-modelo <- update(
-  modelo,
-  . ~ . + Thigh.Girth
-)
-
-print(summary(modelo), signif.stars = FALSE)
-cat("----\n")
-print(anova(modelo, test = "LRT"), signif.stars = FALSE)
-```
-Respecto a este modelo, se observa un valor z de 2.177 asociado a Thigh.Girth con un nivel de significancia de 0.03, es decir, es significativo. Por otro lado, la desviación del modelo nulo mejora de 138.629 a 42.609 con 95 grados de libertad.
-
-Por otro lado, cuando se realiza una prueba ANOVA al modelo, se observa que el valor p obtenido es significativo para $\alpha = 0.05$. Es decir, la variable aporta al modelo para obtener un mejor ajuste que el modelo nulo
-
-Por lo tanto, mantendremos el modelo obtenido anteriormente.
-
+Se observa que en este caso, la variable que reduce en mayor medida el AIC es Age(Edad), sin embargo a diferencia de los modelos anteriores el AIC a subido, por lo que no se consideraran más variables en el modelo.
 
 
 ## Paso 6
+
+### Confiabilidad
 
 Evaluar la confiabilidad y generalidad de los modelos (i.e. que tengan un buen nivel de ajuste, que cumplen las condiciones para RLogit y no están dominados por casos sobreinfluyentes) y “arreglarlos” en caso de que tengan algún problema.
 
 Condiciones para Rlogit:
 
-1. Debe existir una relación lineal entre los predictores y la respuesta transformada.
+ 1. Debe existir una relación lineal entre los predictores y la respuesta transformada.
 
-2. Los residuos deben ser independientes entre sí.
+
+ 2. Los residuos deben ser independientes entre sí.
 
 Método de optimización no converja:
 
-3. Multicolinealidad entre los predictores, que en este caso se evalúa y aborda del mismo moso que para RLM (por ejemplo, mediante el factor de inflación de la varianza o la tolerancia)..
+ 3. Multicolinealidad entre los predictores, que en este caso se evalúa y aborda del mismo moso que para RLM (por ejemplo, mediante el factor de inflación de la varianza o la tolerancia)..
 
-4. Información incompleta, que se produce cuando no contamos con observaciones suficientes para todas las posibles combinaciones de predictores de predictores, en especial para algún nivel de una variable categórica.
+ 4. Información incompleta, que se produce cuando no contamos con observaciones suficientes para todas las posibles combinaciones de predictores de predictores, en especial para algún nivel de una variable categórica.
 
-5. Separación perfecta, que ocurre cuando no hay superposición entre las clases (es decir, como vimos, cuando los predivtores separan ambas clases completamente)
+ 5. Separación perfecta, que ocurre cuando no hay superposición entre las clases (es decir, como vimos, cuando los predivtores separan ambas clases completamente)
 
 Presencia de casos problemáticos
 
-6. Las estimaciones de los cieficientes del modelo no están dominadas por casos influyentes
+ 6. Las estimaciones de los cieficientes del modelo no están dominadas por casos influyentes
 
+#### Modelo RLogitS
+
+ 1. Para revisar la condición lineal se usaran gráficos de residuos
+```{r}
+residualPlots(modelo_actual, fitted= FALSE)
+crPlots(modelo_actual)
+```
+Usando un p value de 0.05 no se rechaza la hipótesis nula de que exista una relación lineal entre el predictor y la respuesta transformada.
+
+
+ 2. Se utiliza el test de durbin Watson para confirmar
+ 
+```{r}
+durbinWatsonTest(modelo_actual)
+```
+Dado que el test no resulta significativo, no existe eviddencia de autocorrelación entre los residuos.
+
+ 3. Solo hay un predictor en este modelo simple, por lo que no existe multicolinealidad
+ 
+ 4. Se cuenta con 2 niveles en la variable categórica EN, cada nivel tiene 50 observaciones y como se ve en la gráfica anterior hay mas de las 15 observaciones minimas requeridas.
+ 
+ 5. No ocurrieron errores al momento de crear el modelo con gml, por lo que no ocurre separación perfecta.
+ 
+ 6.Usaremos el gráfico de burbuja para ver si hay observaciones problematicas
+ 
+```{r}
+influencePlot(modelo_actual)
+```
+ 
+Se ven 4 casos que podrian tener cierta influencia en el modelo sin embargo en el grafico de residuos esta posible influencia no se observa con claridad.
+
+
+#### Modelo RLogitM
+
+ 1. Para revisar la condición lineal se usaran gráficos de residuos y residuos parciales
+ 
+```{r}
+residualPlots(modelo_nuevo, fitted= FALSE)
+crPlots(modelo_nuevo)
+```
+ Si bien hay ciertas curvas en los gráficos los p value dados por el test no son significativo, por lo que no se descarta la condición de linealidad entre predictores y respuesta transformada.
+ 
+ 2. Se utiliza el test de durbin Watson para confirmar
+ 
+```{r}
+durbinWatsonTest(modelo_nuevo)
+```
+El p value no es significativo por lo que el supuesto de independencia se cumple.
+
+ 3. Se obtienen los factores de inflación de varianza para ver si hay multicolinealidad
+ 
+```{r}
+vif(modelo_nuevo)
+```
+ Los valores son iguales para ambos predictores lo que es esperable paara dos predictores continuos sin interacción, no existe multicolinealidad.
+ 
+ 4. Existen 2 niveles e la variable categorica EN, que tiene50 observaciones cada una, por lo que se cuenta con suficientes observaciones para tener información completa.
+ 
+ 5. No existieron errores al momento de generar los modelos por lo que no existe separación perfecta.
+ 
+ 6.Usaremos el gráfico de burbuja para ver si hay observaciones problematicas
+ 
+```{r}
+influencePlot(modelo_nuevo)
+```
+Existen 4 observaciones problematicas, pero por los gráficos de residuos la influencia de estos casos no se observa con claridad.
+
+### Generalización
+
+Para evaluar la generalización se usaran gráficos ROC y matrices de confución y validación cruzada para ver el desempeño de los modelos.
+
+#### Modelo RLogitS
+
+```{r}
+probs_ent <- fitted(modelo_actual)
+
+ROC_ent <- roc(seleccion_dataframe[["EN"]], probs_ent,
+               levels = c(0, 1),
+               direction = "<")
+
+
+g_ROC_ent <- ggroc(ROC_ent, color = "steelblue") +
+  geom_abline(intercept = 1, slope = 1, colour = "steelblue1", linetype = "dashed") +
+  xlab("Especificidad") + ylab("Sensibilidad") +
+  theme_pubr()
+
+texto_ent <- sprintf("AUC = %.2f", auc(ROC_ent))
+g_ROC_ent <- g_ROC_ent + annotate("text", x = 0.3, y = 0.3, label = texto_ent)
+print(g_ROC_ent)
+
+umbral_optimo <- 0.5
+
+preds_ent <- ifelse(probs_ent >= umbral_optimo, 1, 0)
+
+preds_ent_factor <- factor(preds_ent, levels = c(0, 1))
+datos_reales_factor <- factor(seleccion_dataframe[["EN"]], levels = c(0, 1))
+
+mat_conf_ent <- confusionMatrix(preds_ent_factor, datos_reales_factor, positive = "1")
+
+cat("\n\nEvaluación de la calidad predictora (cjto. de entrenamiento):\n")
+cat("------------------------------------------------------------\n")
+print(mat_conf_ent$table)
+cat("\n")
+cat(sprintf("Exactitud (Accuracy) : %.3f\n", mat_conf_ent$overall["Accuracy"]))
+cat(sprintf("Sensibilidad         : %.3f\n", mat_conf_ent$byClass["Sensitivity"]))
+cat(sprintf("Especificidad        : %.3f\n", mat_conf_ent$byClass["Specificity"]))
+```
+Según la matriz de confusion el modelo tiene un 85% de exactitud, un 84% de sensibilidad y un 86% de especificidad, esto junto con el gráfico ROC con un AUC 0.92 indican que el modelo RLogitS es un buen clasificador, con un 85% de exactitud en sus predicciones.
+
+
+```{r}
+datos_cv <- seleccion_dataframe
+datos_cv$EN <- factor(datos_cv$EN, levels = c(0, 1))
+
+
+modelo_ent <- train(
+  EN ~ Hip.Girth, 
+  data = datos_cv, 
+  method = "glm",
+  family = binomial(link = "logit"),
+  trControl = trainControl(
+    method = "cv", 
+    number = 4, 
+    savePredictions = TRUE
+  )
+)
+
+modelo_final <- modelo_ent[["finalModel"]]
+
+cat("Coeficientes del modelo final (Promedio):\n")
+print(summary(modelo_final)$coefficients)
+
+preds <- modelo_ent[["pred"]] |> 
+  mutate(pliegue = factor(Resample)) |>
+  select(pred, obs, pliegue)
+
+conf_mat_list <- preds |> 
+  group_split(pliegue) |>
+  map(~ confusionMatrix(data = .x[["pred"]], reference = .x[["obs"]], positive = "1"))
+
+
+metricas_tab <- conf_mat_list |>
+  map_df(~ data.frame(
+    Exactitud     = .$overall["Accuracy"],
+    Sensibilidad  = .$byClass["Sensitivity"],
+    Especificidad = .$byClass["Specificity"]
+  ), .id = "Pliegue") 
+
+print(metricas_tab)
+```
+El modelo predice que a mayor grosor a la altura de las caderas mayor es la probabilidad de tener sobrepeso, por el p value < 0.05 se puede decir que el grosor de las caderas es un predictor significativo.
+
+#### Modelo RLogitM
+
+```{r}
+probs_ent <- fitted(modelo_nuevo)
+
+ROC_ent <- roc(seleccion_dataframe[["EN"]], probs_ent,
+               levels = c(0, 1),
+               direction = "<")
+
+
+g_ROC_ent <- ggroc(ROC_ent, color = "steelblue") +
+  geom_abline(intercept = 1, slope = 1, colour = "steelblue1", linetype = "dashed") +
+  xlab("Especificidad") + ylab("Sensibilidad") +
+  theme_pubr()
+
+texto_ent <- sprintf("AUC = %.2f", auc(ROC_ent))
+g_ROC_ent <- g_ROC_ent + annotate("text", x = 0.3, y = 0.3, label = texto_ent)
+print(g_ROC_ent)
+
+umbral_optimo <- 0.5
+
+preds_ent <- ifelse(probs_ent >= umbral_optimo, 1, 0)
+
+preds_ent_factor <- factor(preds_ent, levels = c(0, 1))
+datos_reales_factor <- factor(seleccion_dataframe[["EN"]], levels = c(0, 1))
+
+mat_conf_ent <- confusionMatrix(preds_ent_factor, datos_reales_factor, positive = "1")
+
+cat("\n\nEvaluación de la calidad predictora (cjto. de entrenamiento):\n")
+cat("------------------------------------------------------------\n")
+print(mat_conf_ent$table)
+cat("\n")
+cat(sprintf("Exactitud (Accuracy) : %.3f\n", mat_conf_ent$overall["Accuracy"]))
+cat(sprintf("Sensibilidad         : %.3f\n", mat_conf_ent$byClass["Sensitivity"]))
+cat(sprintf("Especificidad        : %.3f\n", mat_conf_ent$byClass["Specificity"]))
+```
+La matriz de confusión dice que el modelo tiene una exactitud de 89%, una sensibilidad de 90% y especificidad de 88%, esto junto al gráfico ROC con un AUC de 0.96 muestran que el modelo es un correcto de clasificador.
+
+
+```{r}
+modelo_ent <- train(
+  EN ~ Waist.Girth + Thigh.Girth, 
+  data = datos_cv, 
+  method = "glm",
+  family = binomial(link = "logit"),
+  trControl = trainControl(
+    method = "cv", 
+    number = 4, 
+    savePredictions = TRUE
+  )
+)
+
+modelo_final <- modelo_ent[["finalModel"]]
+
+cat("Coeficientes del modelo final (Promedio):\n")
+print(summary(modelo_final)$coefficients)
+
+preds <- modelo_ent[["pred"]] |> 
+  mutate(pliegue = factor(Resample)) |>
+  select(pred, obs, pliegue)
+
+conf_mat_list <- preds |> 
+  group_split(pliegue) |>
+  map(~ confusionMatrix(data = .x[["pred"]], reference = .x[["obs"]], positive = "1"))
+
+
+metricas_tab <- conf_mat_list |>
+  map_df(~ data.frame(
+    Exactitud     = .$overall["Accuracy"],
+    Sensibilidad  = .$byClass["Sensitivity"],
+    Especificidad = .$byClass["Specificity"]
+  ), .id = "Pliegue") # Agrega columna identificando el pliegue
+
+print(metricas_tab)
+```
+En la prediccion ambos predictores son significativos segun su p value, su exactidud, sensibilidad y especifidad en los 4 pliegues es mayor a 80% por lo que los predictores seleccionados son fiables y generalizables para la detección de sobrepeso.
 
 ## Paso 7
 
 Usando código estándar, evaluar el poder predictivo de los modelos con los datos de las 50 personas que no se incluyeron en su construcción en términos de sensibilidad y especificidad.
 
+Para ello se utilizaran los mismo metodos anteriores pero con las 50 observaciones que se dejaron fuera anteriormente.
+
+
+### Modelo RLogitS
+
+```{r}
+datos_pru <- muestra_50 
+datos_pru$EN <- factor(datos_pru$EN, levels = c(0, 1))
+
+probs_pru <- predict(modelo_actual, newdata = datos_pru, type = "response")
+
+ROC_pru <- roc(datos_pru[["EN"]], probs_pru,
+               levels = c(0, 1),
+               direction = "<")
+
+g_ROC_pru <- ggroc(ROC_pru, color = "firebrick") + 
+  geom_abline(intercept = 1, slope = 1, colour = "gray", linetype = "dashed") +
+  xlab("Especificidad") + ylab("Sensibilidad") +
+  ggtitle("ROC - Conjunto de Prueba") +
+  theme_pubr()
+
+texto_pru <- sprintf("AUC = %.2f", auc(ROC_pru))
+g_ROC_pru <- g_ROC_pru + annotate("text", x = 0.3, y = 0.3, label = texto_pru)
+print(g_ROC_pru)
+
+umbral_uso <- if(exists("umbral_optimo")) umbral_optimo else 0.5
+
+preds_pru <- ifelse(probs_pru >= umbral_uso, 1, 0)
+preds_pru <- factor(preds_pru, levels = c(0, 1))
+
+mat_conf_pru <- confusionMatrix(preds_pru, datos_pru[["EN"]], positive = "1")
+
+
+cat("\n\nEvaluación del modelo (cjto. de prueba - 50 personas):\n")
+cat("------------------------------------------------------------\n")
+print(mat_conf_pru$table)
+cat("\n")
+cat(sprintf("Exactitud (Accuracy) : %.3f\n", mat_conf_pru$overall["Accuracy"]))
+cat(sprintf("Sensibilidad         : %.3f\n", mat_conf_pru$byClass["Sensitivity"]))
+cat(sprintf("Especificidad        : %.3f\n", mat_conf_pru$byClass["Specificity"]))
+```
+El modelo predictivo tiene una exactitud de 78%, sensibilidad 76% y especificidad de 80%, son valores menores a los observados con los datos de entrenamiento, aun asi la diferencia no es demasiado y se puede sguir considerando un buen modelo si se ve la gráfica de ROC con un AUC de 88%.
+
+### Modelo RLogitM
+```{r}
+
+probs_pru <- predict(modelo_nuevo, newdata = datos_pru, type = "response")
+
+ROC_pru <- roc(datos_pru[["EN"]], probs_pru,
+               levels = c(0, 1),
+               direction = "<")
+
+g_ROC_pru <- ggroc(ROC_pru, color = "firebrick") + 
+  geom_abline(intercept = 1, slope = 1, colour = "gray", linetype = "dashed") +
+  xlab("Especificidad") + ylab("Sensibilidad") +
+  ggtitle("ROC - Conjunto de Prueba") +
+  theme_pubr()
+
+texto_pru <- sprintf("AUC = %.2f", auc(ROC_pru))
+g_ROC_pru <- g_ROC_pru + annotate("text", x = 0.3, y = 0.3, label = texto_pru)
+print(g_ROC_pru)
+
+umbral_uso <- if(exists("umbral_optimo")) umbral_optimo else 0.5
+
+preds_pru <- ifelse(probs_pru >= umbral_uso, 1, 0)
+preds_pru <- factor(preds_pru, levels = c(0, 1))
+
+mat_conf_pru <- confusionMatrix(preds_pru, datos_pru[["EN"]], positive = "1")
+
+
+cat("\n\nEvaluación del modelo (cjto. de prueba - 50 personas):\n")
+cat("------------------------------------------------------------\n")
+print(mat_conf_pru$table)
+cat("\n")
+cat(sprintf("Exactitud (Accuracy) : %.3f\n", mat_conf_pru$overall["Accuracy"]))
+cat(sprintf("Sensibilidad         : %.3f\n", mat_conf_pru$byClass["Sensitivity"]))
+cat(sprintf("Especificidad        : %.3f\n", mat_conf_pru$byClass["Specificity"]))
+```
+El modelo cuenta con un 92% de exactitud, un 100% de sensibilidad y 84% de especificidad, detecto a todas las personas con sobrepeso, y las probailidades son mucho mayores que el modelo predictivo con las observaciones de entrenamiento, en el gráfico ROC, esot sugiere que los predictores escogidos tienen un alto valor predictivo y que el modelo es robusto.
+
+
+
+## Conclusión
+
+El modelo logistico multiple obtenido con los predictores Waist.Girth y Thigh.Girth es robusto y tiene una gran capacidad de predicción de la variable 'EN' creada, asi apto para determinar si una mujer tiene sobrepeso o no, y es adecuado para explicar una relación entre el grosor a la altura de la cintura, el grosor promedio de ambos muslos bajo el pliegue del gluteo y el sobrepreso de una mujer.
+
+El modelo logistico simple construido si bien presenta una capacidad buena pero no sobresaliente en sus predicciones con Hip.Girth y ademas con datos de prueba que no se tomaron en cuenta en el entrenamiento su capacidad predictoria disminuyo cierto porcentaje, por ello puede ser que al construir el modelo multiple esta variable haya perdido significancia, ya que otras variables coo Waist.Girth y Thigh.Girth tienen mayor poder para predecir el sobrepeso en una mujer.
