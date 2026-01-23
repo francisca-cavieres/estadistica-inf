@@ -1,0 +1,215 @@
+---
+title: "EP11-respuesta-equipo-2"
+output: html_document
+date: "2026-01-23"
+---
+
+# Enunciado
+
+Para este ejercicio usaremos los datos de medidas anatómicas recolectados por Heinz et al. (2003) que ya hemos utilizado en los ejercicios prácticos anteriores (disponibles en el archivo "EP09 Datos.csv"), con la adición de las variables IMC y EN consideradas en el ejercicio práctico anterior.
+
+## Paso 0
+
+```{r}
+library(car)
+library(caret)
+#library(tidyverse)
+library(leaps)
+library(dplyr)
+library(ggpubr)
+library(rsample)
+library(pROC)
+datos <- read.csv2("EP09 Datos.csv")
+
+```
+
+
+
+## Paso 1
+
+Definir la semilla a utilizar, que corresponde a los primeros cinco dígitos del RUN del integrante de mayor edad del equipo.
+
+```{r}
+set.seed(4805)
+
+```
+
+## Paso 2
+
+Seleccionar una muestra de 100 personas, asegurando que la mitad tenga estado nutricional “sobrepeso” y la otra mitad “no sobrepeso”.
+
+```{r}
+calculate_IMC <- function(roww){
+  peso <- roww["Weight"]
+  altura <- roww["Height"]/100
+  IMC <- peso / (altura**2)
+  return(IMC)
+}
+
+imc_array <- apply(datos,1,calculate_IMC)
+new_dataframe <- cbind(datos,imc_array)
+umbral <- 23.2
+estado_nutricional <- function(row){
+  if(row["imc_array"] >= umbral){
+    return(1)
+  }else if(row["imc_array"] < umbral){
+    return(0)
+  }else{
+    return(0)
+  }
+}
+
+EN <- apply(new_dataframe,1,estado_nutricional)
+datos_IMC <- cbind(new_dataframe,EN)
+sobrepeso <- datos_IMC[which(datos_IMC$EN == 1),]
+no_sobrepeso <- datos_IMC[which(datos_IMC$EN == 0),]
+
+muestra <- bind_rows(sobrepeso,no_sobrepeso) |> slice_sample(prop = 1)
+muestra_100 <- bind_rows(muestra[which(muestra$EN == 0),] |> sample_n(50), muestra[which(muestra$EN == 1),] |> sample_n(50))|> slice_sample(prop = 1)
+
+muestra_sin_imc_en <- muestra_100 |>
+  select(-imc_array,-EN)
+```
+
+## Paso 3
+
+Usando las herramientas del paquete leaps, realizar una búsqueda exhaustiva para seleccionar entre dos y ocho predictores que ayuden a estimar la variable Peso (Weight), obviamente sin considerar las nuevas variables IMC ni EN, y luego utilizar las funciones del paquete caret para construir un modelo de regresión lineal múltiple con los predictores escogidos y evaluarlo usando bootstrapping.
+
+```{r}
+result <- regsubsets(Weight ~ ., data = muestra_sin_imc_en,nbest=8, method="exhaustive")
+resumen <- summary(result)
+idx <- which.max(resumen$adjr2)
+
+best_predictors <- names(coef(result, idx))[-1]
+best_predictors
+```
+```{r}
+formula_lm <- as.formula(
+  paste("Weight ~", paste(best_predictors, collapse = " + "))
+)
+
+modelo <- train(
+  formula_lm,
+  data = muestra_sin_imc_en,
+  method = "lm"
+)
+
+summary(modelo$finalModel)
+```
+## Paso 4
+
+Haciendo un poco de investigación sobre el paquete caret, en particular cómo hacer Recursive Feature Elimination (RFE), construir un modelo de regresión lineal múltiple para predecir la variable IMC que incluya entre 10 y 20 predictores, seleccionando el conjunto de variables que maximice R2 y que use cinco repeticiones de validación cruzada de cinco pliegues para evitar el sobreajuste (obviamente no se debe considerar las variables Peso, Estatura ni estado nutricional –Weight, Height, EN respectivamente). 
+
+```{r}
+
+
+y <- muestra_100$imc_array
+muestra_sin_peso_estatura_EN_imc <- muestra_100 %>%
+  select(-Weight, -Height,-EN,-imc_array)
+muestra_sin_peso_estatura_EN <- muestra_100 %>%
+  select(-Weight,-Height,-EN)
+
+
+ctrl_rfe <- rfeControl(
+  functions = lmFuncs,     # linear regression
+  method = "cv",   # repeated cross-validation
+  number = 5,              # 5 folds
+  repeats = 5
+)
+sizes <- 10:20
+rfe_model <- rfe(
+  x = muestra_sin_peso_estatura_EN_imc,
+  y = y,
+  sizes = sizes,
+  rfeControl = ctrl_rfe,
+  metric = "Rsquared"
+)
+
+results <- rfe_model$results
+
+results_valid <- results %>%
+  filter(Variables >= 10 & Variables <= 20)
+
+best_row <- results_valid[which.max(results_valid$Rsquared), ]
+best_size <- best_row$Variables
+
+
+best_predictors_rfe <- rfe_model$variables %>%
+  filter(Variables == best_size) %>%
+  group_by(var) %>%
+  summarise(score = mean(Overall, na.rm = TRUE)) %>%
+  arrange(desc(score)) %>%
+  slice_head(n = best_size) %>%
+  pull(var)
+
+best_predictors_rfe
+
+
+```
+
+
+```{r}
+formula_lm_rfe <- as.formula(
+  paste("imc_array ~", paste(best_predictors_rfe, collapse = " + "))
+)
+print(formula_lm_rfe)
+```
+
+```{r}
+modelo_rfe <- train(
+  formula_lm_rfe,
+  data = muestra_100,
+  method = "lm"
+)
+summary(modelo_rfe$final)
+```
+## Paso 5
+
+Usando RFE, construir un modelo de regresión logística múltiple para la variable EN que incluya el conjunto de predictores, entre dos y seis, que entregue la mejor curva ROC y que utilice validación cruzada dejando uno fuera para evitar el sobreajuste (obviamente no se debe considerar las variables Peso, Estatura –Weight y Height respectivamente– ni IMC).
+
+```{r}
+
+muestra_100$EN <- factor(muestra_100$EN)
+muestra_100$EN <- relevel(muestra_100$EN, ref = "1") 
+
+x_log <- muestra_100 |>
+  select(-EN,-Weight,-Height,-imc_array)
+y_log <- muestra_100$EN
+
+ctrl_rfe_log <- rfeControl(
+  functions = lrFuncs,     # logistic regression functions
+  method = "LOOCV",        # leave-one-out CV
+  verbose = FALSE
+)
+
+sizes_log <- 2:6
+model_rfe_log <- rfe(
+  x = x_log,
+  y = y_log,
+  sizes = sizes_log,
+  rfeControl = ctrl_rfe_log,
+  metric = "ROC"
+)
+
+model_rfe_log
+```
+
+```{r}
+best_predictors_rfe_log <- predictors(model_rfe_log)
+
+```
+
+```{r}
+formula_lm_rfe_log <- as.formula(
+  paste("EN ~", paste(best_predictors_rfe_log, collapse = " + "))
+)
+modelo_log <- train(
+  formula_lm_rfe_log,
+  data = muestra_100,
+  method = "glm",
+  family = binomial
+)
+
+summary(modelo_log$finalModel)
+```
+

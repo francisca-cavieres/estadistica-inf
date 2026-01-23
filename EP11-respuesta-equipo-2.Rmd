@@ -1,0 +1,26 @@
+---
+title: "EP10-respuesta-equipo-2"
+output: html_document
+date: "2026-01-23"
+---
+
+# Enunciado
+
+Para este ejercicio usaremos los datos de medidas anatómicas recolectados por Heinz et al. (2003) que ya hemos utilizado en los ejercicios prácticos anteriores (disponibles en el archivo "EP09 Datos.csv"), con la adición de las variables IMC y EN consideradas en el ejercicio práctico anterior.
+
+## Paso 0
+
+```{r}
+datos <- read.csv2("EP09 Datos.csv")
+```
+
+
+
+## Paso 1
+
+Definir la semilla a utilizar, que corresponde a los primeros cinco dígitos del RUN del integrante de mayor edad del equipo.
+
+```{r}
+set.seed(4805)
+```
+
