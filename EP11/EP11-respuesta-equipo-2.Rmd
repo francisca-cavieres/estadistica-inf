@@ -10,7 +10,7 @@ Para este ejercicio usaremos los datos de medidas anatómicas recolectados por H
 
 ## Paso 0
 
-```{r}
+```{r,message=FALSE,warning=FALSE}
 library(car)
 library(caret)
 #library(tidyverse)
@@ -24,14 +24,12 @@ datos <- read.csv2("EP09 Datos.csv")
 ```
 
 
-
 ## Paso 1
 
 Definir la semilla a utilizar, que corresponde a los primeros cinco dígitos del RUN del integrante de mayor edad del equipo.
 
 ```{r}
 set.seed(4805)
-
 ```
 
 ## Paso 2
