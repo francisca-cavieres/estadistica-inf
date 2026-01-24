@@ -83,15 +83,23 @@ idx <- which.max(resumen$adjr2)
 best_predictors <- names(coef(result, idx))[-1]
 best_predictors
 ```
+
+
+
 ```{r}
 formula_lm <- as.formula(
   paste("Weight ~", paste(best_predictors, collapse = " + "))
 )
 
+ctrl_boot <- trainControl(
+  method = "boot",
+  number = 1000
+)
 modelo <- train(
   formula_lm,
   data = muestra_sin_imc_en,
-  method = "lm"
+  method = "lm",
+  trControl = ctrl_boot
 )
 
 summary(modelo$finalModel)
@@ -196,7 +204,7 @@ model_rfe_log
 
 ```{r}
 best_predictors_rfe_log <- predictors(model_rfe_log)
-
+best_predictors_rfe_log
 ```
 
 ```{r}
