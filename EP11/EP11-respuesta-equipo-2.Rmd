@@ -37,6 +37,7 @@ set.seed(4805)
 Seleccionar una muestra de 100 personas, asegurando que la mitad tenga estado nutricional “sobrepeso” y la otra mitad “no sobrepeso”.
 
 ```{r}
+# Calculo del IMC
 calculate_IMC <- function(roww){
   peso <- roww["Weight"]
   altura <- roww["Height"]/100
@@ -44,6 +45,7 @@ calculate_IMC <- function(roww){
   return(IMC)
 }
 
+# Creación variable EN
 imc_array <- apply(datos,1,calculate_IMC)
 new_dataframe <- cbind(datos,imc_array)
 umbral <- 23.2
@@ -218,4 +220,121 @@ modelo_log <- train(
 
 summary(modelo_log$finalModel)
 ```
+## Paso 6
 
+Se deben evaluar la confiabilidad y poder predictivo de los modelos obtenidos
+
+
+### Segundo modelo
+
+#### Confiabilidad
+
+Se evalua la confiabilidad del modelo de regresión lineal múltiple creado
+
+Para evaluar la confiabilidad del modelo obtenido, verificaremos las siguientes condiciones:
+
+1. La variable de respuesta debe ser cuantitativa y continua, sin restricciones para su variabilidad: La variable de repuesta es el IMC, que es el resultado de la división de dos magnitudes fisicas, peso y altura, esta es continua y cuantitativa por lo que se cumple la condición
+  
+
+2. Los predictores deben ser cuantitativos o dicotómicos (de ahí la necesidad de variables indicadoras para manejar más de dos niveles): El predictor Gender es una variable dicotomica pues solo puede ser dos valores 0 o 1, mujer y hombre respectivamente; el resto de predictores son magnitudes físicas medidas en cm por lo que son cuantitativas.
+
+3. Los predictores deben tener algún grado de variabilidad (su varianza no debe ser igual a cero). En otras palabras, no pueden ser constantes.
+```{r}
+apply(muestra_sin_peso_estatura_EN_imc[, c("Gender", "Wrists.diameter", "Knees.diameter", "Ankles.diameter","Knee.Girth", "Biacromial.diameter", "Wrist.Minimum.Girth", "Chest.diameter", "Chest.depth", "Bitrochanteric.diameter", "Ankle.Minimum.Girth", "Calf.Maximum.Girth", "Forearm.Girth", "Bicep.Girth", "Elbows.diameter", "Waist.Girth","Thigh.Girth","Hip.Girth", "Navel.Girth", "Biiliac.diameter")], 2, var)
+```
+Todos los predictores presentan varianza estrictamente mayor a 0 por lo que ninguno es constante, se cumple la condición.
+
+4. Cada predictor debe estar relacionado linealmente con la respuesta.
+
+5. La distribución de los residuos debe ser cercana a la normal centrada en cero.
+
+6. La variabilidad de los residuos debe ser aproximadamente constante (homocedasticidad).
+
+Para los puntos 4, 5 y 6 realizaremos gráficos de influencia y residuos comparados con el predictor.
+```{r}
+muestra_sin_peso_estatura_EN$Gender <- as.factor(muestra_sin_peso_estatura_EN$Gender)
+
+modelo_diag <- lm(imc_array ~ Gender+ Wrists.diameter + Knees.diameter + Ankles.diameter + Knee.Girth + Biacromial.diameter + Wrist.Minimum.Girth + Chest.diameter + Chest.depth + Bitrochanteric.diameter + Ankle.Minimum.Girth + Calf.Maximum.Girth + Forearm.Girth + Bicep.Girth + Elbows.diameter + Waist.Girth + Thigh.Girth + Hip.Girth + Navel.Girth + Biiliac.diameter, data = muestra_sin_peso_estatura_EN)
+
+residualPlots(modelo_diag)
+```
+Para la variable Gender, en el gráfico de cajas se peude ver que mabas cajas son del mismo tamaño por lo que se puede asumir homocedasticidad y al ser una variable dicotómica se cmple la linealidad; para el resto de predictores la mayor parte cumple con linealidad a excepción de Navel.Girth por lo que se corregira el modelo elevando Navel.Girth al cuadrado.
+```{r}
+modelo_corregido <- lm(imc_array ~ Gender + Wrists.diameter + Knees.diameter + Ankles.diameter + Knee.Girth + Biacromial.diameter + Wrist.Minimum.Girth + Chest.diameter + Chest.depth + Bitrochanteric.diameter + Ankle.Minimum.Girth + Calf.Maximum.Girth + Forearm.Girth + Bicep.Girth + Elbows.diameter + Waist.Girth + Thigh.Girth + Hip.Girth + Biiliac.diameter + poly(Navel.Girth, 2), 
+                       data = muestra_sin_peso_estatura_EN)
+
+residualPlots(modelo_corregido)
+```
+Ahora con el modelo corregido si se cumple la linealidad de los predictores con la respuesta, los predictores tampoco presentan desviaciones extremas respecto a la normalidad asi que se puede decir que ambas condiciones de linealidad y normalidad se cumplen para los predictores.
+
+
+Para la homocedasticidad se usan gráficos marginales
+
+```{r}
+marginalModelPlots(modelo_corregido, terms = ~ . - Gender)
+```
+Como se ve en los gráficos, en los predictores la linea del modelo sigue la linea de los datos usados, solo se desvia ligeramente donde hay muy pocos datos, por lo que se puede concluir que esto es más bien una suposición del metodo de aproximación usado para generar las curvas, por lo que se puede decir que se cumple la condición de homocedaticidad.
+
+
+7. Los residuos deben ser independientes entre sí.
+```{r}
+durbinWatsonTest(modelo_corregido)
+```
+Para evitar que estos valores sean por cierto orden en la tabla, se barajan las filas
+```{r}
+filas_random <- sample(nrow(muestra_sin_peso_estatura_EN))
+datos_corregidos <- muestra_sin_peso_estatura_EN[filas_random, ]
+modelo_v2 <- lm(imc_array ~ Gender + Wrists.diameter + Knees.diameter + Ankles.diameter + Knee.Girth + Biacromial.diameter + Wrist.Minimum.Girth + Chest.diameter + Chest.depth + Bitrochanteric.diameter + Ankle.Minimum.Girth + Calf.Maximum.Girth + Forearm.Girth + Bicep.Girth + Elbows.diameter + Waist.Girth + Thigh.Girth + Hip.Girth + Biiliac.diameter + poly(Navel.Girth, 2), data = datos_corregidos)
+```
+
+Con el nuevo modelo hecho con los datos barajados se realiza la prueba nuevamente
+```{r}
+durbinWatsonTest(modelo_v2)
+```
+Aun asi el modelo no cumple la condición de que los residuos sean independientes entre si.
+
+8. No debe existir multicolinealidad. Esto significa que no deben darse relaciones lineales fuertes (coeficientes de correlación altos) entre dos o más predictores.
+```{r}
+vif(modelo_v2)
+```
+Se observan valores VIF mayores a 10 lo cual indica una multicolinealidad severa y los coeficientes pueden ser inestables e inferencias estadisticas poco fiables.
+
+9. Las estimaciones de los coeficientes del modelo no debe estar alterados por unos pocas observaciones influyentes.
+```{r}
+influencePlot(modelo_v2)
+```
+
+El análisis de la distancia de Cook evidencia valores que estan por sobre el umbral (0.714) por lo que existen observaciones influyentes en el modelo.
+
+```{r}
+summary(modelo_v2)
+```
+El modelo presenta un coeficiente de determinación ajustado más o menos alto ($R_{adj}^2$=0.8937), pero este modelo presenta poca confiabilidad debido a que no cumple condiciones de independencia entre residuos, tambien existe una multicolinealidad servera y observaciones influyentes en el modelo, por lo que su confiabilidad y las predicciones que se hagan con este modelo son dudosas.
+
+#### Generalización
+
+Para la generalización del modelo, sacamos otros 100 datos de las observaciones restantes.
+
+```{r}
+model_100_2 <-
+rmse_modelo_70 <- sqrt(mean(resid(modelo_v2)**2))
+cat("RMSE para el conjunto de entrenamiento:",rmse_modelo_70, "\n")
+
+# Se saca una muestra nueva de 100 datos
+datos_IMC$EN <- as.factor(datos_IMC$EN)
+datos_restantes <- suppressMessages(anti_join(datos_IMC, muestra_100))
+muestra_generalizacion <- bind_rows(
+  datos_restantes %>% filter(EN == 0) %>% sample_n(50),
+  datos_restantes %>% filter(EN == 1) %>% sample_n(50)
+) %>%
+  slice_sample(prop = 1)
+muestra_generalizacion$Gender <- as.factor(muestra_generalizacion$Gender)
+
+predicciones <- predict(modelo_v2, muestra_generalizacion)
+
+error <- muestra_generalizacion[["imc_array"]] - predicciones
+
+rmse_prueba <- sqrt(mean(error **2))
+cat("RMSE para el conjunto de prueba:",rmse_prueba)
+```
+El modelo se ha equivocado ligeramente más con el conjunto de prueba, aun asi es estable al predecir la variable imc_array de las personas.

@@ -9,7 +9,7 @@ Un estudio recolectó medidas anatómicas de 247 hombres y 260 mujeres (Heinz et
 
 ## Pregunta 1
 Definir la semilla a utilizar, que corresponde a los últimos cuatro dígitos del RUN (sin considerar el dígito verificador) del integrante de menor edad del equipo.
-```{r, message=FALSE}
+```{r}
 library(car)
 library(leaps)
 library(dplyr)
@@ -247,8 +247,6 @@ summary(modelo_d)
 
 En donde el grosor a la altura de las caderas (Hip.Girth), el grosor de los hombros (Shoulder.Girth), el grosor promedio de la parte más ancha de ambas pantorrillas (Calf.Maximum.Girth), el grosor a la altura de la cintura (Waist.Girth) y grosor promedio de la parte más delgada de ambas muñecas (Wrist.Minimum.Girth) son las variables predictoras del peso corporal (Weight) de las mujeres.
 
-## Pregunta 7
-
 Para evaluar la confiabilidad del modelo obtenido, verificaremos las siguientes condiciones:
 
 1. La variable de respuesta debe ser cuantitativa y continua, sin restricciones para su variabilidad: La variable de repuesta es el Peso, y se observa que es cuantitativa y continua, pues mide una magnitud física. Por lo mismo, no existen restricciones para su variabilidad.
@@ -337,7 +335,7 @@ summary(modelo_d)
 ```
 El modelo presenta un alto coeficiente de determinación ajustado ($R_{adj}^2$=0.9137), lo que indica que una proporción considerable de la variabilidad del peso corporal es explicada por los predictores incluidos.
 
-## Pregunta 8 (Generalización)
+## Generalización
 
 ```{r}
 print(summary(modelo_d))
